@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 )
 
@@ -56,4 +57,18 @@ func readHeader(file io.Reader) *DemoHeader {
 	binary.Read(file, binary.LittleEndian, &header.SignOnLength)
 
 	return header
+}
+
+func printHeader(header *DemoHeader) {
+	fmt.Println("Header:", header.Leader)
+	fmt.Println("Demo Protocol:", header.DemoProtocol)
+	fmt.Println("Network Protocol:", header.NetworkProtocol)
+	fmt.Println("Server Name:", header.ServerName)
+	fmt.Println("Client Name:", header.ClientName)
+	fmt.Println("Map Name:", header.MapName)
+	fmt.Println("Game Directory:", header.GameDirectory)
+	fmt.Println("Playback Time:", header.PlaybackTime)
+	fmt.Println("Ticks:", header.Ticks)
+	fmt.Println("Frames:", header.Frames)
+	fmt.Println("Sign On Length:", header.SignOnLength)
 }
