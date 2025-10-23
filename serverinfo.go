@@ -103,4 +103,5 @@ func printServerInfo(si *DemoServerInfo) {
 	fmt.Println(si.Skybox)
 	fmt.Println(si.ServerName)
 	fmt.Println(si.Replay)
+	fmt.Println("==============================")
 }

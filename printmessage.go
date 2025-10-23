@@ -23,4 +23,5 @@ func readPrintMessage(bitReader *bitreader.Reader) *DemoPrintMessage {
 func printPrintMessage(pm *DemoPrintMessage) {
 	fmt.Println(pm.CommandByte)
 	fmt.Println(pm.PrintString)
+	fmt.Println("==============================")
 }

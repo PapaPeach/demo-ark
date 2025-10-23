@@ -36,23 +36,11 @@ func main() {
 
 	// Print header
 	printHeader(header)
-	fmt.Println("==============================")
-
-	// Get current position in file (should be 1072)
-	/*pos, _ := file.Seek(0, io.SeekCurrent)
-	fmt.Println(pos)*/
 
 	// Get message
 	readMessage(file)
 
-	// Print message
-	/*printMessage(message)
-	fmt.Println("==============================")
-
-	// Get print
-	printMessage := readPrintMessage(message)
-
-	// Print print
-	printPrintMessage(printMessage)
-	fmt.Println("==============================")*/
+	// Get current position in file (should be 1072)
+	/*pos, _ := file.Seek(0, io.SeekCurrent)
+	fmt.Println(pos)*/
 }

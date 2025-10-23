@@ -71,4 +71,5 @@ func printHeader(header *DemoHeader) {
 	fmt.Println("Ticks:", header.Ticks)
 	fmt.Println("Frames:", header.Frames)
 	fmt.Println("Sign On Length:", header.SignOnLength)
+	fmt.Println("==============================")
 }
