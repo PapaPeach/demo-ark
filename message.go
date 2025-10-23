@@ -22,9 +22,41 @@ type DemoMessage struct {
 }
 
 type DemoParsedData struct {
-	PrintMessage []*DemoPrintMessage
-	ServerInfo   []*DemoServerInfo
+	PrintMessage      []*DemoPrintMessage
+	ServerInfo        []*DemoServerInfo
+	NetTick           []*DemoNetTick
+	CreateStringTable []*DemoCreateStringTable
 }
+
+// Message type command bytes
+const Empty uint8 = 0
+const NetFile uint8 = 2
+const NetTick uint8 = 3
+const StringCmd uint8 = 4
+const SetConVar uint8 = 5
+const SignOnState uint8 = 6
+const Print uint8 = 7
+const ServerInfo uint8 = 8
+const ClassInfo uint8 = 10
+const SetPause uint8 = 11
+const CreateStringTable uint8 = 12
+const UpdateStringTable uint8 = 13
+const VoiceInit uint8 = 14
+const VoiceData uint8 = 15
+const Sounds uint8 = 17
+const SetView uint8 = 18
+const FixAngle uint8 = 19
+const BspDecal uint8 = 21
+const UserMessage uint8 = 23
+const EntityMessage uint8 = 24
+const GameEvent uint8 = 25
+const PacketEntities uint8 = 26
+const TempEntities uint8 = 27
+const PreFetch uint8 = 28
+const Menu uint8 = 29
+const GameEventList uint8 = 30
+const GetCvarValue uint8 = 31
+const CmdKeyValues uint8 = 32
 
 func readMessage(file io.Reader) *DemoMessage {
 	msg := &DemoMessage{}
@@ -76,15 +108,21 @@ func parseMessageData(msg *DemoMessage) {
 		}
 
 		// Based on message type, handle accordingly
-		switch messageType {
-		case 0: // Empty
+		switch uint8(messageType) {
+		case Empty:
 			goto breakLoop
-		case 7: // Print
+		case Print:
 			printMessage := readPrintMessage(bitReader)
 			msg.ParsedData.PrintMessage = append(msg.ParsedData.PrintMessage, printMessage)
-		case 8: // Server Info
+		case ServerInfo:
 			serverInfo := readServerInfo(bitReader)
 			msg.ParsedData.ServerInfo = append(msg.ParsedData.ServerInfo, serverInfo)
+		case NetTick:
+			netTick := readNetTick(bitReader)
+			msg.ParsedData.NetTick = append(msg.ParsedData.NetTick, netTick)
+		case CreateStringTable:
+			createStringTable := readCreateStringTable(bitReader)
+			msg.ParsedData.CreateStringTable = append(msg.ParsedData.CreateStringTable, createStringTable)
 		default: // Who tf knows
 			goto breakLoop
 		}
@@ -94,21 +132,33 @@ breakLoop:
 
 func printMessage(msg *DemoMessage) {
 	// Print message field
-	fmt.Println(msg.CommandByte)
-	fmt.Println(msg.Tick)
-	fmt.Println(msg.Flags)
-	fmt.Println(msg.ViewAngles)
-	fmt.Println(msg.SequenceIn)
-	fmt.Println(msg.SequenceOut)
-	fmt.Println(msg.Length)
+	fmt.Println("Command Byte:", msg.CommandByte)
+	fmt.Println("Tick:", msg.Tick)
+	fmt.Println("Flags:", msg.Flags)
+	fmt.Println("View Angles:", msg.ViewAngles)
+	fmt.Println("Sequence In:", msg.SequenceIn)
+	fmt.Println("Sequence Out:", msg.SequenceOut)
+	fmt.Println("Length:", msg.Length)
 	fmt.Println("==============================")
 
 	// Print message data fields
+	// Print
 	for _, pm := range msg.ParsedData.PrintMessage {
 		printPrintMessage(pm)
 	}
 
+	// Server info
 	for _, si := range msg.ParsedData.ServerInfo {
 		printServerInfo(si)
+	}
+
+	// Net tick
+	for _, nt := range msg.ParsedData.NetTick {
+		printNetTick(nt)
+	}
+
+	// Create string table
+	for _, cst := range msg.ParsedData.CreateStringTable {
+		printCreateStringTable(cst)
 	}
 }

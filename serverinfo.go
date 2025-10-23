@@ -30,22 +30,12 @@ func readServerInfo(bitReader *bitreader.Reader) *DemoServerInfo {
 	si := &DemoServerInfo{}
 	si.CommandByte = 8
 
-	// Read version
+	// Read fields
 	si.Version = bitReader.TryReadUInt16()
-
-	// Read server count
 	si.ServerCount = bitReader.TryReadUInt32()
-
-	// Read stv
 	si.Stv = bitReader.TryReadBool()
-
-	// Read dedicatied
 	si.Dedicated = bitReader.TryReadBool()
-
-	// Read client cyclic redundancy check
 	si.ClientCrc = bitReader.TryReadUInt32()
-
-	// Read max classes
 	si.MaxClasses = bitReader.TryReadUInt16()
 
 	// Read map hash
@@ -53,55 +43,37 @@ func readServerInfo(bitReader *bitreader.Reader) *DemoServerInfo {
 		si.MapHash[i] = bitReader.TryReadUInt8()
 	}
 
-	// Read player slot
+	// Read fields
 	si.PlayerSlot = bitReader.TryReadUInt8()
-
-	// Read max players
 	si.MaxPlayers = bitReader.TryReadUInt8()
-
-	// Read tick interval
 	si.TickInterval = bitReader.TryReadFloat32()
-
-	// Read platform
 	si.Platform = bitReader.TryReadStringLength(1)
-
-	// Read game
 	si.Game = bitReader.TryReadString()
-
-	// Read map
 	si.Map = bitReader.TryReadString()
-
-	// Read skybox
 	si.Skybox = bitReader.TryReadString()
-
-	// Read server name
 	si.ServerName = bitReader.TryReadString()
-
-	// Read replay
 	si.Replay = bitReader.TryReadBool()
 
 	return si
 }
 
 func printServerInfo(si *DemoServerInfo) {
-	fmt.Println(si.CommandByte)
-	fmt.Println(si.Version)
-	fmt.Println(si.ServerCount)
-	fmt.Println(si.Stv)
-	fmt.Println(si.Dedicated)
-	fmt.Println(si.ClientCrc)
-	fmt.Println(si.MaxClasses)
-	//for _, mh := range si.MapHash {
-	fmt.Println(si.MapHash)
-	//}
-	fmt.Println(si.PlayerSlot)
-	fmt.Println(si.MaxPlayers)
-	fmt.Println(si.TickInterval)
-	fmt.Println(si.Platform)
-	fmt.Println(si.Game)
-	fmt.Println(si.Map)
-	fmt.Println(si.Skybox)
-	fmt.Println(si.ServerName)
-	fmt.Println(si.Replay)
+	fmt.Println("Command Byte:", si.CommandByte)
+	fmt.Println("Version", si.Version)
+	fmt.Println("Server Count:", si.ServerCount)
+	fmt.Println("STV:", si.Stv)
+	fmt.Println("Dedicated:", si.Dedicated)
+	fmt.Println("Client CRC:", si.ClientCrc)
+	fmt.Println("Max Classes:", si.MaxClasses)
+	fmt.Println("Map Hash:", si.MapHash)
+	fmt.Println("Player Slot:", si.PlayerSlot)
+	fmt.Println("Max Players:", si.MaxPlayers)
+	fmt.Println("Tick Interval:", si.TickInterval)
+	fmt.Println("Platform:", si.Platform)
+	fmt.Println("Game:", si.Game)
+	fmt.Println("Map:", si.Map)
+	fmt.Println("Skybox:", si.Skybox)
+	fmt.Println("Server Name:", si.ServerName)
+	fmt.Println("Replay:", si.Replay)
 	fmt.Println("==============================")
 }

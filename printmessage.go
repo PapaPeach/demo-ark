@@ -17,11 +17,12 @@ func readPrintMessage(bitReader *bitreader.Reader) *DemoPrintMessage {
 
 	// Read print message contents
 	pm.PrintString, _ = bitReader.ReadString()
+
 	return pm
 }
 
 func printPrintMessage(pm *DemoPrintMessage) {
-	fmt.Println(pm.CommandByte)
-	fmt.Println(pm.PrintString)
+	fmt.Println("Command Byte:", pm.CommandByte)
+	fmt.Println("Message:", pm.PrintString)
 	fmt.Println("==============================")
 }
