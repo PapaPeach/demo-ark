@@ -92,9 +92,6 @@ func readMessage(file io.Reader) *DemoMessage {
 	// Parse message data
 	parseMessageData(msg)
 
-	// Print message
-	printMessage(msg)
-
 	return msg
 }
 

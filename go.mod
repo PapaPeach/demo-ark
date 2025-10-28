@@ -1,4 +1,4 @@
-module demoman/parser
+module demo-ark/demoark
 
 go 1.25.3
 

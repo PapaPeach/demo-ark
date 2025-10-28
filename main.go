@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 
 	"github.com/pektezol/bitreader"
 )
@@ -63,7 +64,44 @@ func main() {
 	printHeader(header)
 
 	// Get message
-	readMessage(file)
+	msg := readMessage(file)
+	printMessage(msg)
+
+	// Determine if casual
+	casual := false
+	for _, sc := range msg.ParsedData.SetConVar {
+		if i := slices.Index(sc.ConVars, "mp_tournament"); i != -1 && sc.ConVars[i+1] == "1" {
+			fmt.Println("mp_tournament 1")
+		} else {
+			continue
+		}
+
+		if i := slices.Index(sc.ConVars, "mp_tournament_stopwatch"); i != -1 && sc.ConVars[i+1] == "0" {
+			fmt.Println("mp_tournament_stopwatch 0")
+		} else {
+			continue
+		}
+
+		if i := slices.Index(sc.ConVars, "mp_tournament_readymode"); i != -1 && sc.ConVars[i+1] == "1" {
+			fmt.Println("mp_tournament_readymode 1")
+		} else {
+			continue
+		}
+
+		if i := slices.Index(sc.ConVars, "mp_tournament_readymode_min"); i != -1 && sc.ConVars[i+1] == "0" {
+			fmt.Println("mp_tournament_readymode_min 0")
+		} else {
+			continue
+		}
+
+		casual = true
+		break
+	}
+	if casual {
+		fmt.Println("Detected casual demo")
+	} else {
+		fmt.Println("Detected tournament demo")
+	}
 
 	// Get current position in file (should be 1072)
 	/*pos, _ := file.Seek(0, io.SeekCurrent)

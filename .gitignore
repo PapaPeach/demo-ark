@@ -1,4 +1,6 @@
 *.dem
 *.exe
+*.txt
 *.zip
+
 test*/*
