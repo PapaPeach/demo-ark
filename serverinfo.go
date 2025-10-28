@@ -27,8 +27,7 @@ type DemoServerInfo struct {
 }
 
 func readServerInfo(bitReader *bitreader.Reader) *DemoServerInfo {
-	si := &DemoServerInfo{}
-	si.CommandByte = 8
+	si := &DemoServerInfo{CommandByte: 8}
 
 	// Read fields
 	si.Version = bitReader.TryReadUInt16()

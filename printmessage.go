@@ -12,8 +12,7 @@ type DemoPrintMessage struct {
 }
 
 func readPrintMessage(bitReader *bitreader.Reader) *DemoPrintMessage {
-	pm := &DemoPrintMessage{}
-	pm.CommandByte = 7
+	pm := &DemoPrintMessage{CommandByte: 7}
 
 	// Read print message contents
 	pm.PrintString, _ = bitReader.ReadString()

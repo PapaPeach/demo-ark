@@ -14,8 +14,7 @@ type DemoNetTick struct {
 }
 
 func readNetTick(bitReader *bitreader.Reader) *DemoNetTick {
-	nt := &DemoNetTick{}
-	nt.CommandByte = 3
+	nt := &DemoNetTick{CommandByte: 3}
 
 	// Read fields
 	nt.Tick = bitReader.TryReadUInt32()

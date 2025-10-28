@@ -26,6 +26,7 @@ type DemoParsedData struct {
 	ServerInfo        []*DemoServerInfo
 	NetTick           []*DemoNetTick
 	CreateStringTable []*DemoCreateStringTable
+	SetConVar         []*DemoSetConVar
 }
 
 // Message type command bytes
@@ -123,6 +124,9 @@ func parseMessageData(msg *DemoMessage) {
 		case CreateStringTable:
 			createStringTable := readCreateStringTable(bitReader)
 			msg.ParsedData.CreateStringTable = append(msg.ParsedData.CreateStringTable, createStringTable)
+		case SetConVar:
+			setConVar := readSetConVar(bitReader)
+			msg.ParsedData.SetConVar = append(msg.ParsedData.SetConVar, setConVar)
 		default: // Who tf knows
 			goto breakLoop
 		}
@@ -160,5 +164,10 @@ func printMessage(msg *DemoMessage) {
 	// Create string table
 	for _, cst := range msg.ParsedData.CreateStringTable {
 		printCreateStringTable(cst)
+	}
+
+	// Set ConVar
+	for _, sc := range msg.ParsedData.SetConVar {
+		printSetConVar(sc)
 	}
 }

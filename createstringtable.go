@@ -13,15 +13,15 @@ type DemoCreateStringTable struct {
 	MaxEntries    uint16
 	NumEntries    uint16
 	Length        uint32
+	DataFixedSize bool
 	DataSize      uint16
 	DataSizeBits  uint8
-	DataFixedSize bool
+	Flags         uint8
 	Entries       []string
 }
 
 func readCreateStringTable(bitReader *bitreader.Reader) *DemoCreateStringTable {
-	cst := &DemoCreateStringTable{}
-	cst.CommandByte = 12
+	cst := &DemoCreateStringTable{CommandByte: 12}
 
 	// Read fields
 	cst.Name = bitReader.TryReadString()
@@ -32,19 +32,24 @@ func readCreateStringTable(bitReader *bitreader.Reader) *DemoCreateStringTable {
 	cst.NumEntries = uint16(bitReader.TryReadBits(uint64(numEntriesBits)))
 
 	// Read fields
-	cst.Length = uint32(bitReader.TryReadBits(20))
-	//cst.Length = ReadVarInt(bitReader)
+	//cst.Length = uint32(bitReader.TryReadBits(20)) TODO
+	cst.Length = readVarInt(bitReader)
+
 	cst.DataFixedSize = bitReader.TryReadBool()
 	if cst.DataFixedSize {
 		cst.DataSize = uint16(bitReader.TryReadBits(12))
 		cst.DataSizeBits = uint8(bitReader.TryReadBits(4))
+	} else {
+		//cst.DataSize = bitReader.TryReadUInt16() TODO
 	}
+
+	// I don't think this actually does anything or is correct?
+	cst.Flags = uint8(bitReader.TryReadBits(1))
 
 	// Read entries TODO
-	for range cst.NumEntries {
-		cst.Entries = append(cst.Entries, bitReader.TryReadStringLength(uint64(cst.Length/8/uint32(cst.NumEntries))))
-	}
-
+	/*for range cst.NumEntries {
+		cst.Entries = append(cst.Entries, bitReader.TryReadStringLength(uint64(cst.Length/2)))
+	}*/
 	bitReader.SkipBits(uint64(cst.Length))
 
 	return cst
@@ -61,33 +66,14 @@ func printCreateStringTable(cst *DemoCreateStringTable) {
 	if cst.DataFixedSize {
 		fmt.Println("Data Size Bytes:", cst.DataSize)
 		fmt.Println("Data Size Bits:", cst.DataSizeBits)
+	} else {
+		fmt.Println("Data Size:", cst.DataSize)
 	}
+
+	fmt.Println("Flags:", cst.Flags)
 
 	for i, entry := range cst.Entries {
 		fmt.Printf("Entry %v: %v\n", i, entry)
 	}
 	fmt.Println("==============================")
-}
-
-func ReadVarInt(r *bitreader.Reader) uint32 {
-	var result uint32 = 0
-	var shift uint = 0
-
-	// Maximum 5 bytes = 5 * 7 bits = 35 bits
-	for shift = 0; shift < 35; shift += 7 {
-		// Assume the varint is byte-aligned, so read 8 bits at once
-		v, err := r.ReadBits(8)
-		if err != nil {
-			return 0
-		}
-		b := uint8(v)
-
-		result |= uint32(b&0x7F) << shift
-
-		if b&0x80 == 0 {
-			break
-		}
-	}
-
-	return result
 }
