@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 )
@@ -140,7 +141,7 @@ func moveToDirectory(wishDir string, demos []Demo) {
 	}
 
 	// Make directory to move to
-	err := os.Mkdir(wishDir, os.ModePerm)
+	err := os.MkdirAll(wishDir, os.ModePerm)
 	if err != nil && !errors.Is(err, os.ErrExist) {
 		log.Println(err)
 		os.Exit(1)
@@ -164,66 +165,70 @@ func enterToExit() {
 
 func main() {
 	// Get demos
-	demos := getDemos()
-	demoCount := len(demos)
-	fmt.Printf("Scanning %d demos...\n", demoCount)
+	demoList := getDemos()
+	demoListCount := len(demoList)
+	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
 	//fmt.Println(time.Now().Year())
-	//groupYears(demos)
+	years := groupYears(demoList)
 
-	// Asynchronously scan demos if there's a lot
-	var casualDemos []Demo
-	var mvmDemos []Demo
-	var tournamentDemos []Demo
-	cores := (runtime.NumCPU() / 2) - 1 // Avoid e-cores and keep one core open
-	if cores > 1 && demoCount > cores*10 {
-		type GameTypes struct {
-			Casual     []Demo
-			Mvm        []Demo
-			Tournament []Demo
-		}
+	for year, demos := range years {
+		// Asynchronously scan demos if there's a lot
+		var casualDemos []Demo
+		var mvmDemos []Demo
+		var tournamentDemos []Demo
+		demoCount := len(demos)
+		cores := (runtime.NumCPU() / 2) - 1 // Avoid e-cores and keep one core open
+		if cores > 1 && demoCount > cores*10 {
+			type GameTypes struct {
+				Casual     []Demo
+				Mvm        []Demo
+				Tournament []Demo
+			}
 
-		// Determine how to split demos list to distribute across cores
-		chunkLength := demoCount / cores
-		chunkStart := 0
-		chunkEnd := chunkLength
-		fmt.Printf("Utilizing %d cores...\n", cores)
+			// Determine how to split demos list to distribute across cores
+			chunkLength := demoCount / cores
+			chunkStart := 0
+			chunkEnd := chunkLength
+			fmt.Printf("Utilizing %d cores...\n", cores)
 
-		// Scan demos and determine gamemode type
-		scanned := make([]GameTypes, cores)
-		var scanners sync.WaitGroup
-		for i := range cores - 1 {
-			cs := chunkStart
-			ce := chunkEnd
+			// Scan demos and determine gamemode type
+			scanned := make([]GameTypes, cores)
+			var scanners sync.WaitGroup
+			for i := range cores - 1 {
+				cs := chunkStart
+				ce := chunkEnd
+				scanners.Go(func() {
+					c, m, t := groupGameTypes(demos[cs:ce])
+					scanned[i] = GameTypes{c, m, t}
+				})
+				chunkStart += chunkLength
+				chunkEnd += chunkLength
+			}
 			scanners.Go(func() {
-				c, m, t := groupGameTypes(demos[cs:ce])
-				scanned[i] = GameTypes{c, m, t}
+				c, m, t := groupGameTypes(demos[chunkStart:])
+				scanned[cores-1] = GameTypes{c, m, t}
 			})
-			chunkStart += chunkLength
-			chunkEnd += chunkLength
-		}
-		scanners.Go(func() {
-			c, m, t := groupGameTypes(demos[chunkStart:])
-			scanned[cores-1] = GameTypes{c, m, t}
-		})
-		scanners.Wait()
+			scanners.Wait()
 
-		// Combine scanned gametype demos
-		for i := range scanned {
-			casualDemos = append(casualDemos, scanned[i].Casual...)
-			mvmDemos = append(mvmDemos, scanned[i].Mvm...)
-			tournamentDemos = append(tournamentDemos, scanned[i].Tournament...)
+			// Combine scanned gametype demos
+			for i := range scanned {
+				casualDemos = append(casualDemos, scanned[i].Casual...)
+				mvmDemos = append(mvmDemos, scanned[i].Mvm...)
+				tournamentDemos = append(tournamentDemos, scanned[i].Tournament...)
+			}
+		} else { // Scan using single core
+			casualDemos, mvmDemos, tournamentDemos = groupGameTypes(demos)
 		}
-	} else { // Scan using single core
-		casualDemos, mvmDemos, tournamentDemos = groupGameTypes(demos)
+
+		// Move files to corresponding directories
+		dirPrefix := filepath.Join(strconv.Itoa(year)+"demos", "")
+		var movers sync.WaitGroup
+		movers.Go(func() { moveToDirectory(dirPrefix+"casual", casualDemos) })
+		movers.Go(func() { moveToDirectory(dirPrefix+"mvm", mvmDemos) })
+		movers.Go(func() { moveToDirectory(dirPrefix+"tournament", tournamentDemos) })
+		movers.Wait()
 	}
-
-	// Move files to corresponding directories
-	var movers sync.WaitGroup
-	movers.Go(func() { moveToDirectory("demos_casual", casualDemos) })
-	movers.Go(func() { moveToDirectory("demos_mvm", mvmDemos) })
-	movers.Go(func() { moveToDirectory("demos_tournament", tournamentDemos) })
-	movers.Wait()
 
 	//enterToExit()
 }
