@@ -127,22 +127,55 @@ func enterToExit() {
 func main() {
 	// Get demos
 	demos := getDemos()
-	fmt.Printf("Scanning %d demos...\n", len(demos))
+	demoCount := len(demos)
+	fmt.Printf("Scanning %d demos...\n", demoCount)
 
-	// Figure out list splitting logic for async demo scanning
-	cores := runtime.NumCPU() / 2
-	chunkLength := len(demos) / cores
-	chunkStart := 0
-	chunkEnd := chunkLength
-	for range cores - 1 {
-		fmt.Println(len(demos[chunkStart:chunkEnd]))
-		chunkStart += chunkLength
-		chunkEnd += chunkLength
+	// Asynchronously scan demos if there's a lot
+	var casualDemos []string
+	var mvmDemos []string
+	var tournamentDemos []string
+	cores := (runtime.NumCPU() / 2) - 1
+	if cores > 1 && demoCount > cores*10 {
+		type GameTypes struct {
+			casual     []string
+			mvm        []string
+			tournament []string
+		}
+
+		// Determine how to split demos list to distribute across threads
+		chunkLength := demoCount / cores
+		chunkStart := 0
+		chunkEnd := chunkLength
+		fmt.Printf("Utilizing %d cores...\n", cores)
+
+		// Scan demos and determine gamemode type
+		scanned := make([]GameTypes, cores)
+		var scanners sync.WaitGroup
+		for i := range cores - 1 {
+			cs := chunkStart
+			ce := chunkEnd
+			scanners.Go(func() {
+				c, m, t := groupGameTypes(demos[cs:ce])
+				scanned[i] = GameTypes{c, m, t}
+			})
+			chunkStart += chunkLength
+			chunkEnd += chunkLength
+		}
+		scanners.Go(func() {
+			c, m, t := groupGameTypes(demos[chunkStart:])
+			scanned[cores-1] = GameTypes{c, m, t}
+		})
+		scanners.Wait()
+
+		// Combine scanned gametype demos
+		for i := range scanned {
+			casualDemos = append(casualDemos, scanned[i].casual...)
+			mvmDemos = append(mvmDemos, scanned[i].mvm...)
+			tournamentDemos = append(tournamentDemos, scanned[i].tournament...)
+		}
+	} else { // Scan using single thread
+		casualDemos, mvmDemos, tournamentDemos = groupGameTypes(demos)
 	}
-	fmt.Println(len(demos[chunkEnd:]))
-
-	// Scan demos and determine gamemode type
-	casualDemos, mvmDemos, tournamentDemos := groupGameTypes(demos)
 
 	// Move files to corresponding directories, asynchronously!
 	var movers sync.WaitGroup
