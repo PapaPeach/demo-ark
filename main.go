@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -80,6 +81,18 @@ func main() {
 	// Get demos
 	demos := getDemos()
 	fmt.Printf("Scanning %d demos...\n", len(demos))
+
+	// Figure out list splitting logic for async demo scanning
+	cores := runtime.NumCPU()
+	sectionLength := len(demos) / (cores / 2)
+	sectionStart := 0
+	sectionEnd := sectionLength
+	for range cores - 1 {
+		fmt.Println(len(demos[sectionStart:sectionEnd]))
+		sectionStart += sectionLength
+		sectionEnd += sectionLength
+	}
+	fmt.Println(len(demos[sectionEnd:]))
 
 	// Scan demos and determine gamemode type
 	var casualDemos []string
