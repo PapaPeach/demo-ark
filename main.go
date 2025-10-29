@@ -41,6 +41,53 @@ func getDemos() []string {
 	return demos
 }
 
+/** Scan demos and determine gamemode type */
+func groupGameTypes(demos []string) ([]string, []string, []string) {
+	var casualDemos []string
+	var mvmDemos []string
+	var tournamentDemos []string
+	for _, filename := range demos {
+		// Open file for reading
+		file, err := os.Open(filename)
+		if err != nil {
+			fmt.Printf("Error opening %v: %v", filename, err)
+		}
+
+		// Determine if MvM via map prefix in header
+		header := readHeader(file)
+		if strings.HasPrefix(header.MapName, "mvm_") {
+			mvmDemos = append(mvmDemos, filename)
+			file.Close()
+			continue
+		}
+
+		// Get message contents
+		file.Seek(1072, io.SeekStart)
+		msg := readMessage(file)
+
+		// Determine if casual via specific conVar values
+		casual := false
+		for _, sc := range msg.ParsedData.SetConVar {
+			// Check if tournament 1, stopwatch 0, readymode 1, readymode_min 0
+			if checkConVar(sc.ConVars, "mp_tournament", "1") &&
+				checkConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
+				checkConVar(sc.ConVars, "mp_tournament_readymode", "1") &&
+				checkConVar(sc.ConVars, "mp_tournament_readymode_min", "0") {
+				casual = true
+				file.Close()
+				break
+			}
+		}
+		if casual {
+			casualDemos = append(casualDemos, filename)
+		} else {
+			tournamentDemos = append(tournamentDemos, filename)
+		}
+		file.Close()
+	}
+	return casualDemos, mvmDemos, tournamentDemos
+}
+
 /** Moves files in a list of files to a directory */
 func moveToDirectory(wishDir string, files []string) {
 	// Handle length accordingly
@@ -83,70 +130,26 @@ func main() {
 	fmt.Printf("Scanning %d demos...\n", len(demos))
 
 	// Figure out list splitting logic for async demo scanning
-	cores := runtime.NumCPU()
-	sectionLength := len(demos) / (cores / 2)
-	sectionStart := 0
-	sectionEnd := sectionLength
+	cores := runtime.NumCPU() / 2
+	chunkLength := len(demos) / cores
+	chunkStart := 0
+	chunkEnd := chunkLength
 	for range cores - 1 {
-		fmt.Println(len(demos[sectionStart:sectionEnd]))
-		sectionStart += sectionLength
-		sectionEnd += sectionLength
+		fmt.Println(len(demos[chunkStart:chunkEnd]))
+		chunkStart += chunkLength
+		chunkEnd += chunkLength
 	}
-	fmt.Println(len(demos[sectionEnd:]))
+	fmt.Println(len(demos[chunkEnd:]))
 
 	// Scan demos and determine gamemode type
-	var casualDemos []string
-	var mvmDemos []string
-	var tournamentDemos []string
-	for _, filename := range demos {
-		// Open file for reading
-		file, err := os.Open(filename)
-		if err != nil {
-			fmt.Printf("Error opening %v: %v", filename, err)
-		}
-
-		// Determine if MvM via map prefix in header
-		header := readHeader(file)
-		if strings.HasPrefix(header.MapName, "mvm_") {
-			//fmt.Println("Detected mvm demo:\t\t", filename)
-			mvmDemos = append(mvmDemos, filename)
-			file.Close()
-			continue
-		}
-
-		// Get message contents
-		file.Seek(1072, io.SeekStart)
-		msg := readMessage(file)
-
-		// Determine if casual via specific conVar values
-		casual := false
-		for _, sc := range msg.ParsedData.SetConVar {
-			// Check if tournament 1, stopwatch 0, tournament_readymode_min 0
-			if checkConVar(sc.ConVars, "mp_tournament", "1") &&
-				checkConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
-				checkConVar(sc.ConVars, "mp_tournament_readymode", "1") &&
-				checkConVar(sc.ConVars, "mp_tournament_readymode_min", "0") {
-				casual = true
-				file.Close()
-				break
-			}
-		}
-		if casual {
-			//fmt.Println("Detected casual demo:\t\t", filename)
-			casualDemos = append(casualDemos, filename)
-		} else {
-			//fmt.Println("Detected tournament demo:\t", filename)
-			tournamentDemos = append(tournamentDemos, filename)
-		}
-		file.Close()
-	}
+	casualDemos, mvmDemos, tournamentDemos := groupGameTypes(demos)
 
 	// Move files to corresponding directories, asynchronously!
-	var wg sync.WaitGroup
-	wg.Go(func() { moveToDirectory("demos_casual", casualDemos) })
-	wg.Go(func() { moveToDirectory("demos_mvm", mvmDemos) })
-	wg.Go(func() { moveToDirectory("demos_tournament", tournamentDemos) })
-	wg.Wait()
+	var movers sync.WaitGroup
+	movers.Go(func() { moveToDirectory("demos_casual", casualDemos) })
+	movers.Go(func() { moveToDirectory("demos_mvm", mvmDemos) })
+	movers.Go(func() { moveToDirectory("demos_tournament", tournamentDemos) })
+	movers.Wait()
 
 	//enterToExit()
 }
