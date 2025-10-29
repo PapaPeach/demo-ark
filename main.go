@@ -13,6 +13,20 @@ import (
 	"sync"
 )
 
+type Demo struct {
+	Name     string
+	Year     int
+	Duration float32
+	Map      string
+}
+
+type DemoYear struct {
+	Year       int
+	Casual     []Demo
+	Mvm        []Demo
+	Tournament []Demo
+}
+
 /** Checks if conVar exists with the desired value in a array conVars */
 func checkConVar(conVars []string, wishStr string, wishVal string) bool {
 	if i := slices.Index(conVars, wishStr); i != -1 && conVars[i+1] == wishVal {
@@ -22,46 +36,60 @@ func checkConVar(conVars []string, wishStr string, wishVal string) bool {
 }
 
 /** Returns a list of .dem files in the current directory */
-func getDemos() []string {
+func getDemos() []Demo {
 	// Get list of files in current directory
-	files, err := os.ReadDir(".")
+	directory, err := os.Open(".")
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
 	}
+	files, err := directory.Readdir(0)
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
+	defer directory.Close()
 
 	// Filter list to only have .dem files
-	var demos []string
+	var demos []Demo
 	for _, file := range files {
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".dem") {
-			demos = append(demos, file.Name())
+			// Get header for map name and duration
+			f, err := os.Open(file.Name())
+			if err != nil {
+				fmt.Printf("Error opening %v: %v", file.Name(), err)
+			}
+			header := readHeader(f)
+
+			demo := Demo{file.Name(), file.ModTime().Year(), header.PlaybackTime, header.MapName}
+			demos = append(demos, demo)
+			f.Close()
 		}
 	}
 
 	return demos
 }
 
-/** Scan demos and determine gamemode type */
-func groupGameTypes(demos []string) ([]string, []string, []string) {
-	var casualDemos []string
-	var mvmDemos []string
-	var tournamentDemos []string
-	for _, filename := range demos {
+/** Group demos by gametype */
+func groupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
+	var casualDemos []Demo
+	var mvmDemos []Demo
+	var tournamentDemos []Demo
+	for i := range demos {
 		// Open file for reading
-		file, err := os.Open(filename)
-		if err != nil {
-			fmt.Printf("Error opening %v: %v", filename, err)
-		}
+		filename := demos[i].Name
 
 		// Determine if MvM via map prefix in header
-		header := readHeader(file)
-		if strings.HasPrefix(header.MapName, "mvm_") {
-			mvmDemos = append(mvmDemos, filename)
-			file.Close()
+		if strings.HasPrefix(demos[i].Map, "mvm_") {
+			mvmDemos = append(mvmDemos, demos[i])
 			continue
 		}
 
 		// Get message contents
+		file, err := os.Open(filename)
+		if err != nil {
+			fmt.Printf("Error opening %v: %v", filename, err)
+		}
 		file.Seek(1072, io.SeekStart)
 		msg := readMessage(file)
 
@@ -79,19 +107,29 @@ func groupGameTypes(demos []string) ([]string, []string, []string) {
 			}
 		}
 		if casual {
-			casualDemos = append(casualDemos, filename)
+			casualDemos = append(casualDemos, demos[i])
 		} else {
-			tournamentDemos = append(tournamentDemos, filename)
+			tournamentDemos = append(tournamentDemos, demos[i])
 		}
 		file.Close()
 	}
 	return casualDemos, mvmDemos, tournamentDemos
 }
 
+/** Groups demos by year */
+func groupYears(demos []Demo) map[int][]Demo {
+	years := make(map[int][]Demo)
+	for _, demo := range demos {
+		years[demo.Year] = append(years[demo.Year], demo)
+	}
+
+	return years
+}
+
 /** Moves files in a list of files to a directory */
-func moveToDirectory(wishDir string, files []string) {
+func moveToDirectory(wishDir string, demos []Demo) {
 	// Handle length accordingly
-	length := len(files)
+	length := len(demos)
 	switch length {
 	case 0: // Skip if no files to move exist
 		return
@@ -109,8 +147,8 @@ func moveToDirectory(wishDir string, files []string) {
 	}
 
 	// Move files to directory
-	for _, file := range files {
-		err := os.Rename(file, filepath.Join(wishDir, file))
+	for _, demo := range demos {
+		err := os.Rename(demo.Name, filepath.Join(wishDir, demo.Name))
 		if err != nil {
 			log.Println(err)
 		}
@@ -130,19 +168,22 @@ func main() {
 	demoCount := len(demos)
 	fmt.Printf("Scanning %d demos...\n", demoCount)
 
+	//fmt.Println(time.Now().Year())
+	//groupYears(demos)
+
 	// Asynchronously scan demos if there's a lot
-	var casualDemos []string
-	var mvmDemos []string
-	var tournamentDemos []string
-	cores := (runtime.NumCPU() / 2) - 1
+	var casualDemos []Demo
+	var mvmDemos []Demo
+	var tournamentDemos []Demo
+	cores := (runtime.NumCPU() / 2) - 1 // Avoid e-cores and keep one core open
 	if cores > 1 && demoCount > cores*10 {
 		type GameTypes struct {
-			casual     []string
-			mvm        []string
-			tournament []string
+			Casual     []Demo
+			Mvm        []Demo
+			Tournament []Demo
 		}
 
-		// Determine how to split demos list to distribute across threads
+		// Determine how to split demos list to distribute across cores
 		chunkLength := demoCount / cores
 		chunkStart := 0
 		chunkEnd := chunkLength
@@ -169,15 +210,15 @@ func main() {
 
 		// Combine scanned gametype demos
 		for i := range scanned {
-			casualDemos = append(casualDemos, scanned[i].casual...)
-			mvmDemos = append(mvmDemos, scanned[i].mvm...)
-			tournamentDemos = append(tournamentDemos, scanned[i].tournament...)
+			casualDemos = append(casualDemos, scanned[i].Casual...)
+			mvmDemos = append(mvmDemos, scanned[i].Mvm...)
+			tournamentDemos = append(tournamentDemos, scanned[i].Tournament...)
 		}
-	} else { // Scan using single thread
+	} else { // Scan using single core
 		casualDemos, mvmDemos, tournamentDemos = groupGameTypes(demos)
 	}
 
-	// Move files to corresponding directories, asynchronously!
+	// Move files to corresponding directories
 	var movers sync.WaitGroup
 	movers.Go(func() { moveToDirectory("demos_casual", casualDemos) })
 	movers.Go(func() { moveToDirectory("demos_mvm", mvmDemos) })
