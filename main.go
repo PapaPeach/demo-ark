@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 )
 
 /** Checks if conVar exists with the desired value in a array conVars */
@@ -127,10 +128,12 @@ func main() {
 		file.Close()
 	}
 
-	// Move files to corresponding directories
-	moveToDirectory("demos_casual", casualDemos)
-	moveToDirectory("demos_mvm", mvmDemos)
-	moveToDirectory("demos_tournament", tournamentDemos)
+	// Move files to corresponding directories, asynchronously!
+	var wg sync.WaitGroup
+	wg.Go(func() { moveToDirectory("demos_casual", casualDemos) })
+	wg.Go(func() { moveToDirectory("demos_mvm", mvmDemos) })
+	wg.Go(func() { moveToDirectory("demos_tournament", tournamentDemos) })
+	wg.Wait()
 
 	//enterToExit()
 }
