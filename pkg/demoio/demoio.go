@@ -1,6 +1,7 @@
-package main
+package demoio
 
 import (
+	"demo-ark/demoark/pkg/parser"
 	"errors"
 	"fmt"
 	"io"
@@ -20,7 +21,7 @@ type Demo struct {
 }
 
 /* Returns a list of .dem files in the current directory */
-func getDemos(ignoreWords []string) []Demo {
+func GetDemos(ignoreWords []string) []Demo {
 	// Get list of files in current directory
 	directory, err := os.Open(".")
 	if err != nil {
@@ -50,7 +51,7 @@ func getDemos(ignoreWords []string) []Demo {
 			if err != nil {
 				fmt.Printf("Error opening %v: %v", file.Name(), err)
 			}
-			header := readHeader(f)
+			header := parser.ReadHeader(f)
 
 			demo := Demo{file.Name(), file.ModTime(), header.PlaybackTime, header.MapName}
 			demos = append(demos, demo)
@@ -63,7 +64,7 @@ func getDemos(ignoreWords []string) []Demo {
 }
 
 /* Checks if conVar exists with the desired value in a array conVars */
-func checkConVar(conVars []string, wishStr string, wishVal string) bool {
+func CheckConVar(conVars []string, wishStr string, wishVal string) bool {
 	if i := slices.Index(conVars, wishStr); i != -1 && conVars[i+1] == wishVal {
 		return true
 	}
@@ -71,7 +72,7 @@ func checkConVar(conVars []string, wishStr string, wishVal string) bool {
 }
 
 /* Group demos by gametype */
-func groupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
+func GroupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
 	var casualDemos []Demo
 	var mvmDemos []Demo
 	var tournamentDemos []Demo
@@ -91,16 +92,16 @@ func groupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
 			fmt.Printf("Error opening %v: %v", filename, err)
 		}
 		file.Seek(1072, io.SeekStart)
-		msg := readMessage(file)
+		msg := parser.ReadMessage(file)
 
 		// Determine if casual via specific conVar values
 		casual := false
 		for _, sc := range msg.ParsedData.SetConVar {
 			// Check if tournament 1, stopwatch 0, readymode 1, readymode_min 0
-			if checkConVar(sc.ConVars, "mp_tournament", "1") &&
-				checkConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
-				checkConVar(sc.ConVars, "mp_tournament_readymode", "1") &&
-				checkConVar(sc.ConVars, "mp_tournament_readymode_min", "0") {
+			if CheckConVar(sc.ConVars, "mp_tournament", "1") &&
+				CheckConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
+				CheckConVar(sc.ConVars, "mp_tournament_readymode", "1") &&
+				CheckConVar(sc.ConVars, "mp_tournament_readymode_min", "0") {
 				casual = true
 				file.Close()
 				break
@@ -117,7 +118,7 @@ func groupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
 }
 
 /* Groups demos by year */
-func groupYears(demos []Demo) map[int][]Demo {
+func GroupYears(demos []Demo) map[int][]Demo {
 	years := make(map[int][]Demo)
 	for _, demo := range demos {
 		years[demo.ModTime.Year()] = append(years[demo.ModTime.Year()], demo)
@@ -127,7 +128,7 @@ func groupYears(demos []Demo) map[int][]Demo {
 }
 
 /* Moves files in a list of files to a directory */
-func moveToDirectory(wishDir string, demos []Demo) {
+func MoveToDirectory(wishDir string, demos []Demo) {
 	// Handle length accordingly
 	length := len(demos)
 	switch length {

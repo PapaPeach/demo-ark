@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"encoding/binary"
@@ -59,7 +59,7 @@ const GameEventList uint8 = 30
 const GetCvarValue uint8 = 31
 const CmdKeyValues uint8 = 32
 
-func readMessage(file io.Reader) *DemoMessage {
+func ReadMessage(file io.Reader) *DemoMessage {
 	msg := &DemoMessage{}
 
 	// Read command byte that tells us type of message (should be 1 for signon)
@@ -90,12 +90,12 @@ func readMessage(file io.Reader) *DemoMessage {
 	binary.Read(file, binary.LittleEndian, &msg.RawData)
 
 	// Parse message data
-	parseMessageData(msg)
+	ParseMessageData(msg)
 
 	return msg
 }
 
-func parseMessageData(msg *DemoMessage) {
+func ParseMessageData(msg *DemoMessage) {
 	// Parse message data
 	bitReader := bitreader.NewReaderFromBytes(msg.RawData, true)
 	for {
@@ -110,19 +110,19 @@ func parseMessageData(msg *DemoMessage) {
 		case Empty:
 			goto breakLoop
 		case Print:
-			printMessage := readPrintMessage(bitReader)
+			printMessage := ReadPrintMessage(bitReader)
 			msg.ParsedData.PrintMessage = append(msg.ParsedData.PrintMessage, printMessage)
 		case ServerInfo:
-			serverInfo := readServerInfo(bitReader)
+			serverInfo := ReadServerInfo(bitReader)
 			msg.ParsedData.ServerInfo = append(msg.ParsedData.ServerInfo, serverInfo)
 		case NetTick:
-			netTick := readNetTick(bitReader)
+			netTick := ReadNetTick(bitReader)
 			msg.ParsedData.NetTick = append(msg.ParsedData.NetTick, netTick)
 		case CreateStringTable:
-			createStringTable := readCreateStringTable(bitReader)
+			createStringTable := ReadCreateStringTable(bitReader)
 			msg.ParsedData.CreateStringTable = append(msg.ParsedData.CreateStringTable, createStringTable)
 		case SetConVar:
-			setConVar := readSetConVar(bitReader)
+			setConVar := ReadSetConVar(bitReader)
 			msg.ParsedData.SetConVar = append(msg.ParsedData.SetConVar, setConVar)
 		default: // Who tf knows
 			goto breakLoop
@@ -131,7 +131,7 @@ func parseMessageData(msg *DemoMessage) {
 breakLoop:
 }
 
-func printMessage(msg *DemoMessage) {
+func PrintMessage(msg *DemoMessage) {
 	// Print message field
 	fmt.Println("Command Byte:", msg.CommandByte)
 	fmt.Println("Tick:", msg.Tick)
@@ -145,26 +145,26 @@ func printMessage(msg *DemoMessage) {
 	// Print message data fields
 	// Print
 	for _, pm := range msg.ParsedData.PrintMessage {
-		printPrintMessage(pm)
+		PrintPrintMessage(pm)
 	}
 
 	// Server info
 	for _, si := range msg.ParsedData.ServerInfo {
-		printServerInfo(si)
+		PrintServerInfo(si)
 	}
 
 	// Net tick
 	for _, nt := range msg.ParsedData.NetTick {
-		printNetTick(nt)
+		PrintNetTick(nt)
 	}
 
 	// Create string table
 	for _, cst := range msg.ParsedData.CreateStringTable {
-		printCreateStringTable(cst)
+		PrintCreateStringTable(cst)
 	}
 
 	// Set ConVar
 	for _, sc := range msg.ParsedData.SetConVar {
-		printSetConVar(sc)
+		PrintSetConVar(sc)
 	}
 }

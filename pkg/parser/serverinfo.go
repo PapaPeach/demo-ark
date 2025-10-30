@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"fmt"
@@ -26,7 +26,7 @@ type DemoServerInfo struct {
 	Replay       bool
 }
 
-func readServerInfo(bitReader *bitreader.Reader) *DemoServerInfo {
+func ReadServerInfo(bitReader *bitreader.Reader) *DemoServerInfo {
 	si := &DemoServerInfo{CommandByte: 8}
 
 	// Read fields
@@ -56,7 +56,7 @@ func readServerInfo(bitReader *bitreader.Reader) *DemoServerInfo {
 	return si
 }
 
-func printServerInfo(si *DemoServerInfo) {
+func PrintServerInfo(si *DemoServerInfo) {
 	fmt.Println("Command Byte:", si.CommandByte)
 	fmt.Println("Version", si.Version)
 	fmt.Println("Server Count:", si.ServerCount)

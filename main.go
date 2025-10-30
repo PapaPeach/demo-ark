@@ -1,6 +1,7 @@
 package main
 
 import (
+	"demo-ark/demoark/pkg/demoio"
 	"fmt"
 	"log"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"sync"
 )
+
+type Demo = demoio.Demo
 
 type Arguments struct {
 	Silent         bool     // Run program without prompts
@@ -192,12 +195,12 @@ func main() {
 	args := getArgs()
 
 	// Get demos
-	demoList := getDemos(args.IgnoreWords)
+	demoList := demoio.GetDemos(args.IgnoreWords)
 	demoListCount := len(demoList)
 	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
 	//fmt.Println(time.Now().Clock())
-	years := groupYears(demoList)
+	years := demoio.GroupYears(demoList)
 
 	for year, demos := range years {
 		// Asynchronously scan demos if there's a lot
@@ -226,14 +229,14 @@ func main() {
 				cs := chunkStart
 				ce := chunkEnd
 				scanners.Go(func() {
-					c, m, t := groupGameTypes(demos[cs:ce])
+					c, m, t := demoio.GroupGameTypes(demos[cs:ce])
 					scanned[i] = GameTypes{c, m, t}
 				})
 				chunkStart += chunkLength
 				chunkEnd += chunkLength
 			}
 			scanners.Go(func() {
-				c, m, t := groupGameTypes(demos[chunkStart:])
+				c, m, t := demoio.GroupGameTypes(demos[chunkStart:])
 				scanned[cores-1] = GameTypes{c, m, t}
 			})
 			scanners.Wait()
@@ -245,15 +248,15 @@ func main() {
 				tournamentDemos = append(tournamentDemos, scanned[i].Tournament...)
 			}
 		} else { // Scan using single core
-			casualDemos, mvmDemos, tournamentDemos = groupGameTypes(demos)
+			casualDemos, mvmDemos, tournamentDemos = demoio.GroupGameTypes(demos)
 		}
 
 		// Move files to corresponding directories
 		dirPrefix := filepath.Join(strconv.Itoa(year)+"demos", "")
 		var movers sync.WaitGroup
-		movers.Go(func() { moveToDirectory(dirPrefix+"casual", casualDemos) })
-		movers.Go(func() { moveToDirectory(dirPrefix+"mvm", mvmDemos) })
-		movers.Go(func() { moveToDirectory(dirPrefix+"tournament", tournamentDemos) })
+		movers.Go(func() { demoio.MoveToDirectory(dirPrefix+"casual", casualDemos) })
+		movers.Go(func() { demoio.MoveToDirectory(dirPrefix+"mvm", mvmDemos) })
+		movers.Go(func() { demoio.MoveToDirectory(dirPrefix+"tournament", tournamentDemos) })
 		movers.Wait()
 	}
 

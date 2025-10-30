@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"fmt"
@@ -11,7 +11,7 @@ type DemoPrintMessage struct {
 	PrintString string
 }
 
-func readPrintMessage(bitReader *bitreader.Reader) *DemoPrintMessage {
+func ReadPrintMessage(bitReader *bitreader.Reader) *DemoPrintMessage {
 	pm := &DemoPrintMessage{CommandByte: 7}
 
 	// Read print message contents
@@ -20,7 +20,7 @@ func readPrintMessage(bitReader *bitreader.Reader) *DemoPrintMessage {
 	return pm
 }
 
-func printPrintMessage(pm *DemoPrintMessage) {
+func PrintPrintMessage(pm *DemoPrintMessage) {
 	fmt.Println("Command Byte:", pm.CommandByte)
 	fmt.Println("Message:", pm.PrintString)
 	fmt.Println("==============================")

@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"fmt"
@@ -13,7 +13,7 @@ type DemoNetTick struct {
 	FrameTimeStdDeviation uint16
 }
 
-func readNetTick(bitReader *bitreader.Reader) *DemoNetTick {
+func ReadNetTick(bitReader *bitreader.Reader) *DemoNetTick {
 	nt := &DemoNetTick{CommandByte: 3}
 
 	// Read fields
@@ -24,7 +24,7 @@ func readNetTick(bitReader *bitreader.Reader) *DemoNetTick {
 	return nt
 }
 
-func printNetTick(nt *DemoNetTick) {
+func PrintNetTick(nt *DemoNetTick) {
 	fmt.Println("Command Byte:", nt.CommandByte)
 	fmt.Println("Tick:", nt.Tick)
 	fmt.Println("Frame Time:", nt.FrameTime)

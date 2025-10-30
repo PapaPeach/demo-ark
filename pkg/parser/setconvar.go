@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ type DemoSetConVar struct {
 	ConVars     []string
 }
 
-func readSetConVar(bitReader *bitreader.Reader) *DemoSetConVar {
+func ReadSetConVar(bitReader *bitreader.Reader) *DemoSetConVar {
 	sc := &DemoSetConVar{CommandByte: 5}
 
 	// Read length
@@ -26,7 +26,7 @@ func readSetConVar(bitReader *bitreader.Reader) *DemoSetConVar {
 	return sc
 }
 
-func printSetConVar(sc *DemoSetConVar) {
+func PrintSetConVar(sc *DemoSetConVar) {
 	fmt.Println("Command Byte:", sc.CommandByte)
 	fmt.Println("Length:", sc.Length)
 

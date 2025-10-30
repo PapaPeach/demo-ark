@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"io"
@@ -6,7 +6,7 @@ import (
 	"github.com/pektezol/bitreader"
 )
 
-func readString(file io.Reader, length int) string {
+func ReadString(file io.Reader, length int) string {
 	// Only read desired length
 	rawString := make([]byte, length)
 	io.ReadFull(file, rawString)
@@ -21,7 +21,7 @@ func readString(file io.Reader, length int) string {
 	return string(rawString[:])
 }
 
-func readVarInt(bitReader *bitreader.Reader) uint32 {
+func ReadVarInt(bitReader *bitreader.Reader) uint32 {
 	var result uint32 = 0
 	var shift uint = 0
 

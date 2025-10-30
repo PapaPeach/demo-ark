@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"encoding/binary"
@@ -20,11 +20,11 @@ type DemoHeader struct {
 	SignOnLength    int32
 }
 
-func readHeader(file io.Reader) *DemoHeader {
+func ReadHeader(file io.Reader) *DemoHeader {
 	header := &DemoHeader{}
 
 	// Get leader
-	header.Leader = readString(file, 8)
+	header.Leader = ReadString(file, 8)
 
 	// Get demo protocol
 	binary.Read(file, binary.LittleEndian, &header.DemoProtocol)
@@ -33,16 +33,16 @@ func readHeader(file io.Reader) *DemoHeader {
 	binary.Read(file, binary.LittleEndian, &header.NetworkProtocol)
 
 	// Get server name
-	header.ServerName = readString(file, 260)
+	header.ServerName = ReadString(file, 260)
 
 	// Get client name
-	header.ClientName = readString(file, 260)
+	header.ClientName = ReadString(file, 260)
 
 	// Get map name
-	header.MapName = readString(file, 260)
+	header.MapName = ReadString(file, 260)
 
 	// Get game directory
-	header.GameDirectory = readString(file, 260)
+	header.GameDirectory = ReadString(file, 260)
 
 	// Get playback time
 	binary.Read(file, binary.LittleEndian, &header.PlaybackTime)
@@ -59,7 +59,7 @@ func readHeader(file io.Reader) *DemoHeader {
 	return header
 }
 
-func printHeader(header *DemoHeader) {
+func PrintHeader(header *DemoHeader) {
 	fmt.Println("Header:", header.Leader)
 	fmt.Println("Demo Protocol:", header.DemoProtocol)
 	fmt.Println("Network Protocol:", header.NetworkProtocol)

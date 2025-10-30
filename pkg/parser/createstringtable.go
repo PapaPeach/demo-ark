@@ -1,4 +1,4 @@
-package main
+package parser
 
 import (
 	"fmt"
@@ -20,7 +20,7 @@ type DemoCreateStringTable struct {
 	Entries       []string
 }
 
-func readCreateStringTable(bitReader *bitreader.Reader) *DemoCreateStringTable {
+func ReadCreateStringTable(bitReader *bitreader.Reader) *DemoCreateStringTable {
 	cst := &DemoCreateStringTable{CommandByte: 12}
 
 	// Read fields
@@ -33,7 +33,7 @@ func readCreateStringTable(bitReader *bitreader.Reader) *DemoCreateStringTable {
 
 	// Read fields
 	//cst.Length = uint32(bitReader.TryReadBits(20)) TODO
-	cst.Length = readVarInt(bitReader)
+	cst.Length = ReadVarInt(bitReader)
 
 	cst.DataFixedSize = bitReader.TryReadBool()
 	if cst.DataFixedSize {
@@ -55,7 +55,7 @@ func readCreateStringTable(bitReader *bitreader.Reader) *DemoCreateStringTable {
 	return cst
 }
 
-func printCreateStringTable(cst *DemoCreateStringTable) {
+func PrintCreateStringTable(cst *DemoCreateStringTable) {
 	fmt.Println("Command Byte:", cst.CommandByte)
 	fmt.Println("Name:", cst.Name)
 	fmt.Println("Max Entries:", cst.MaxEntries)
