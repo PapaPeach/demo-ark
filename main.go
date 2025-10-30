@@ -22,9 +22,11 @@ type Arguments struct {
 	RenameDuration bool     // Rename demo to contain the duration of the demo
 	SearchFolders  bool     // Search for folders within the current directory
 	Multithread    bool     // Allow the use of multiple cores / threads
+	DateFormat     uint8    // 0: YYYY-MM-DD | 1: MM-DD-YYYY | 2 DD-MM-YYYY
+	TimeFormat     uint8    // 0: 24hr | 1: 12hr
 	ZipOlderThan   uint8    // Zip demos older than this many years
 	CullBelow      uint8    // Number of seconds that demos below that duration will be deleted
-	MajorDirectory uint8    // Ex: year/gametype/demo.dem | gametype/year/demo.dem
+	MajorDirectory uint8    // 0: year/gametype/demo.dem | 1: gametype/year/demo.dem
 	IgnoreWords    []string // Ignore file / folder names containing string
 }
 
@@ -83,6 +85,8 @@ func getArgs() Arguments {
 	const RenameDuration = "renameduration"
 	const SearchFolders = "searchfolders"
 	const Multithread = "multithread"
+	const DateFormat = "dateformat"
+	const TimeFormat = "timeformat"
 	const ZipOlderThan = "zipolderthan"
 	const CullBelow = "cullbelow"
 	const MajorDirectory = "majordirectory"
@@ -95,7 +99,23 @@ func getArgs() Arguments {
 	}
 
 	// Get bool arg values
-	var a Arguments
+	a := Arguments{
+		Silent:         false,
+		SortYear:       true,
+		SortGameType:   true,
+		RenameMap:      true,
+		RenameDate:     true,
+		RenameTime:     true,
+		RenameDuration: false,
+		SearchFolders:  false,
+		Multithread:    true,
+		DateFormat:     0,
+		TimeFormat:     0,
+		ZipOlderThan:   1,
+		CullBelow:      10,
+		MajorDirectory: 0,
+		IgnoreWords:    []string{"reference"},
+	}
 	a.Silent = parseBoolArg(args, Silent, "Running silently")
 	a.SortYear = parseBoolArg(args, SortYear, "Sorting years")
 	a.SortGameType = parseBoolArg(args, SortGameType, "Sorting game types")
@@ -104,9 +124,34 @@ func getArgs() Arguments {
 	a.RenameTime = parseBoolArg(args, RenameTime, "Renaming with record time")
 	a.RenameDuration = parseBoolArg(args, RenameDuration, "Rename with demo duration")
 	a.SearchFolders = parseBoolArg(args, SearchFolders, "Searching folders")
-	a.Multithread = parseBoolArg(args, Multithread, "Multithreading enabled")
+	a.Multithread = parseBoolArg(args, Multithread, "Multithreading set")
 
 	// Get int arg values
+	a.DateFormat = uint8(parseIntArg(args, DateFormat, "Date format set"))
+	if a.DateFormat > 2 {
+		log.Printf("Invalid date format: %d\tMust be 0, 1, or 2\n", a.DateFormat)
+		enterToExit(false)
+	}
+
+	a.TimeFormat = uint8(parseIntArg(args, TimeFormat, ""))
+	if slices.Contains(args, TimeFormat) {
+		switch a.TimeFormat {
+		case 24:
+			a.TimeFormat = 0
+			fallthrough
+		case 0: // 24hr
+			fmt.Println("Time format set to 24hr")
+		case 12:
+			a.TimeFormat = 1
+			fallthrough
+		case 1: //12hr
+			fmt.Println("Time format set to 12hr")
+		default:
+			log.Printf("Invalid time format value: %d\tMust be 0, 1, 12, or 24\n", a.TimeFormat)
+			enterToExit(false)
+		}
+	}
+
 	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan, "Zipping old demos"))
 	a.CullBelow = uint8(parseIntArg(args, CullBelow, "Culling short demos"))
 
@@ -115,8 +160,10 @@ func getArgs() Arguments {
 		switch args[i+1] {
 		case "year":
 			a.MajorDirectory = 0
+			fmt.Println("Major directory set to year")
 		case "gametype":
 			a.MajorDirectory = 1
+			fmt.Println("Major directory set to gametype")
 		default:
 			log.Printf("Invalid argument value: %s = %s\n", args[i], args[i+1])
 			enterToExit(false)
@@ -126,6 +173,7 @@ func getArgs() Arguments {
 	// Get ignore words
 	if i := slices.Index(args, IgnoreWords); i != -1 {
 		a.IgnoreWords = append(a.IgnoreWords, args[i+1:]...)
+		fmt.Println("Ignoring words:", a.IgnoreWords)
 	}
 
 	return a
@@ -144,11 +192,11 @@ func main() {
 	args := getArgs()
 
 	// Get demos
-	demoList := getDemos()
+	demoList := getDemos(args.IgnoreWords)
 	demoListCount := len(demoList)
 	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
-	//fmt.Println(time.Now().Year())
+	//fmt.Println(time.Now().Clock())
 	years := groupYears(demoList)
 
 	for year, demos := range years {

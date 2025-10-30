@@ -9,17 +9,18 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
 type Demo struct {
 	Name     string
-	Year     int
+	ModTime  time.Time
 	Duration float32
 	Map      string
 }
 
 /* Returns a list of .dem files in the current directory */
-func getDemos() []Demo {
+func getDemos(ignoreWords []string) []Demo {
 	// Get list of files in current directory
 	directory, err := os.Open(".")
 	if err != nil {
@@ -37,6 +38,13 @@ func getDemos() []Demo {
 	var demos []Demo
 	for _, file := range files {
 		if !file.IsDir() && strings.HasSuffix(file.Name(), ".dem") {
+			// Skip ignored words
+			for _, ignoreWord := range ignoreWords {
+				if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
+					goto ignored
+				}
+			}
+
 			// Get header for map name and duration
 			f, err := os.Open(file.Name())
 			if err != nil {
@@ -44,10 +52,11 @@ func getDemos() []Demo {
 			}
 			header := readHeader(f)
 
-			demo := Demo{file.Name(), file.ModTime().Year(), header.PlaybackTime, header.MapName}
+			demo := Demo{file.Name(), file.ModTime(), header.PlaybackTime, header.MapName}
 			demos = append(demos, demo)
 			f.Close()
 		}
+	ignored:
 	}
 
 	return demos
@@ -111,7 +120,7 @@ func groupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
 func groupYears(demos []Demo) map[int][]Demo {
 	years := make(map[int][]Demo)
 	for _, demo := range demos {
-		years[demo.Year] = append(years[demo.Year], demo)
+		years[demo.ModTime.Year()] = append(years[demo.ModTime.Year()], demo)
 	}
 
 	return years
