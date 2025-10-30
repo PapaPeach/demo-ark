@@ -28,6 +28,125 @@ type DemoYear struct {
 	Tournament []Demo
 }
 
+type Arguments struct {
+	Silent         bool     // Run program without prompts
+	SortYear       bool     // Group demos by year
+	SortGameType   bool     // Group demos by game type
+	RenameMap      bool     // Rename the demo to contain the map name
+	RenameDate     bool     // Rename the demo to contain the recorded/edited date
+	RenameTime     bool     // Rename the demo to contain the recored/edited time
+	RenameDuration bool     // Rename demo to contain the duration of the demo
+	SearchFolders  bool     // Search for folders within the current directory
+	Multithread    bool     // Allow the use of multiple cores / threads
+	ZipOlderThan   uint8    // Zip demos older than this many years
+	CullBelow      uint8    // Number of seconds that demos below that duration will be deleted
+	MajorDirectory uint8    // Ex: year/gametype/demo.dem | gametype/year/demo.dem
+	IgnoreWords    []string // Ignore file / folder names containing string
+}
+
+/** Parses boolean arguments and returns the boolean value */
+func parseBoolArg(args []string, str string, message string) bool {
+	if i := slices.Index(args, str); i != -1 {
+		switch args[i+1] {
+		case "1":
+			fallthrough
+		case "true":
+			fmt.Println(message)
+			return true
+		case "0":
+			fallthrough
+		case "false":
+			return false
+		default:
+			log.Printf("Invalid argument value: %s = %s\n", args[i], args[i+1])
+			enterToExit(false)
+		}
+	}
+
+	return false
+}
+
+/** Parses integer arguments and returns the integer value */
+func parseIntArg(args []string, str string, message string) uint8 {
+	if i := slices.Index(args, str); i != -1 {
+		value, err := strconv.Atoi(args[i+1])
+		if err != nil {
+			log.Printf("Invalid argument value: %s = %s\n", args[i], args[i+1])
+			enterToExit(false)
+		}
+
+		// If value wouldn't fit
+		if value > 255 {
+			log.Printf("Invalid argument value: %s = %s\tMaximum value: 255", args[i], args[i+1])
+			enterToExit(false)
+		}
+
+		fmt.Println(message)
+		return uint8(value)
+	}
+
+	return 0
+}
+
+/** Gets argument values */
+func getArgs() Arguments {
+	const Silent = "silent"
+	const SortYear = "sortyear"
+	const SortGameType = "sortgametype"
+	const RenameMap = "renamemap"
+	const RenameDate = "renamedate"
+	const RenameTime = "renametime"
+	const RenameDuration = "renameduration"
+	const SearchFolders = "searchfolders"
+	const Multithread = "multithread"
+	const ZipOlderThan = "zipolderthan"
+	const CullBelow = "cullbelow"
+	const MajorDirectory = "majordirectory"
+	const IgnoreWords = "ignorewords"
+
+	// Convert args to lower case
+	var args []string
+	for _, arg := range os.Args[1:] {
+		args = append(args, strings.ToLower(arg))
+	}
+
+	// Get bool arg values
+	var a Arguments
+	a.Silent = parseBoolArg(args, Silent, "Running silently")
+	a.SortYear = parseBoolArg(args, SortYear, "Sorting years")
+	a.SortGameType = parseBoolArg(args, SortGameType, "Sorting game types")
+	a.RenameMap = parseBoolArg(args, RenameMap, "Renaming with map name")
+	a.RenameDate = parseBoolArg(args, RenameDate, "Renaming with record date")
+	a.RenameTime = parseBoolArg(args, RenameTime, "Renaming with record time")
+	a.RenameDuration = parseBoolArg(args, RenameDuration, "Rename with demo duration")
+	a.SearchFolders = parseBoolArg(args, SearchFolders, "Searching folders")
+	a.Multithread = parseBoolArg(args, Multithread, "Multithreading enabled")
+
+	// Get int arg values
+	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan, "Zipping old demos"))
+	a.CullBelow = uint8(parseIntArg(args, CullBelow, "Culling short demos"))
+
+	// Get major directory
+	if i := slices.Index(args, MajorDirectory); i != -1 {
+		switch args[i+1] {
+		case "year":
+			a.MajorDirectory = 0
+		case "gametype":
+			a.MajorDirectory = 1
+		default:
+			log.Printf("Invalid argument value: %s = %s\n", args[i], args[i+1])
+			enterToExit(false)
+		}
+	}
+
+	// Get ignore words
+	if i := slices.Index(args, IgnoreWords); i != -1 {
+		a.IgnoreWords = append(a.IgnoreWords, args[i+1:]...)
+	}
+
+	return a
+}
+
 /** Checks if conVar exists with the desired value in a array conVars */
 func checkConVar(conVars []string, wishStr string, wishVal string) bool {
 	if i := slices.Index(conVars, wishStr); i != -1 && conVars[i+1] == wishVal {
@@ -157,13 +276,17 @@ func moveToDirectory(wishDir string, demos []Demo) {
 }
 
 /** Prompts user to press enter to exit the program, then exit when entered */
-func enterToExit() {
-	fmt.Println("Press enter to close.")
-	fmt.Scanln()
+func enterToExit(silent bool) {
+	if !silent {
+		fmt.Println("Press enter to close.")
+		fmt.Scanln()
+	}
 	os.Exit(0)
 }
 
 func main() {
+	args := getArgs()
+
 	// Get demos
 	demoList := getDemos()
 	demoListCount := len(demoList)
@@ -230,5 +353,5 @@ func main() {
 		movers.Wait()
 	}
 
-	//enterToExit()
+	enterToExit(args.Silent)
 }
