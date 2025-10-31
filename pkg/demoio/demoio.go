@@ -9,15 +9,88 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Demo struct {
 	Name     string
+	NewName  string
+	Map      string
 	ModTime  time.Time
 	Duration float32
-	Map      string
+}
+
+// TODO: Use date in filename if possible
+/* Generates a time format string based on arguments */
+func GetTimeFormat(dateFormat uint8, timeFormat uint8) string {
+	// Format date
+	var date string
+	switch dateFormat {
+	default:
+		fallthrough
+	case 0: // YYYY-MM-DD
+		date = "2006-01-02"
+	case 1: // MM-DD-YYYY
+		date = "01-02-2006"
+	case 2: // DD-MM-YYYY
+		date = "02-01-2006"
+	}
+
+	// Format time
+	var time string
+	switch timeFormat {
+	default:
+		fallthrough
+	case 0: // 24 hr
+		time = "15-04-05"
+	case 1: // 12 hr
+		time = "03-04-05"
+	}
+
+	// Combine date_time
+	return fmt.Sprintf("%s_%s", date, time)
+}
+
+/* Generates new names for demos to according to the arguments provided */
+func GetNewNames(demos []Demo, dateTimeFormat string, keepPrefix bool, renameMap bool, renameDuration bool) {
+	for i := range demos {
+		// If neither are set, just use NewName = Name (set via GetDemos)
+		if !(renameMap || renameDuration) {
+			return
+		}
+
+		// Get prefix
+		var prefix string
+		if keepPrefix {
+			yearString := strconv.Itoa(demos[i].ModTime.Year())
+			if yearIdx := strings.Index(demos[i].Name, yearString); yearIdx != -1 {
+				prefix = demos[i].Name[:yearIdx] + "_"
+			} else {
+				demIdx := strings.Index(demos[i].Name, ".dem")
+				prefix = demos[i].Name[:demIdx] + "_"
+			}
+		}
+		wishName := prefix
+
+		// Add map name
+		if renameMap {
+			wishName += demos[i].Map + "_"
+		}
+
+		// Add date and time of creation / edit
+		wishName += demos[i].ModTime.Format(dateTimeFormat)
+
+		// Add duration
+		if renameDuration {
+			length := int(demos[i].Duration)
+			wishName = fmt.Sprintf("%s_%d-%02d", wishName, length/60, length%60)
+		}
+
+		// Add .dem and set demo's new name
+		demos[i].NewName = wishName + ".dem"
+	}
 }
 
 /* Returns a list of .dem files in the current directory */
@@ -53,7 +126,7 @@ func GetDemos(ignoreWords []string) []Demo {
 			}
 			header := parser.ReadHeader(f)
 
-			demo := Demo{file.Name(), file.ModTime(), header.PlaybackTime, header.MapName}
+			demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, ModTime: file.ModTime(), Duration: header.PlaybackTime}
 			demos = append(demos, demo)
 			f.Close()
 		}
@@ -127,6 +200,7 @@ func GroupYears(demos []Demo) map[int][]Demo {
 	return years
 }
 
+// TODO: Update _events.json
 /* Moves files in a list of files to a directory */
 func MoveToDirectory(wishDir string, demos []Demo) {
 	// Handle length accordingly
@@ -149,7 +223,7 @@ func MoveToDirectory(wishDir string, demos []Demo) {
 
 	// Move files to directory
 	for _, demo := range demos {
-		err := os.Rename(demo.Name, filepath.Join(wishDir, demo.Name))
+		err := os.Rename(demo.Name, filepath.Join(wishDir, demo.NewName))
 		if err != nil {
 			log.Println(err)
 		}

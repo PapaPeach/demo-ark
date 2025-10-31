@@ -19,13 +19,12 @@ type Arguments struct {
 	Silent         bool     // Run program without prompts
 	SortYear       bool     // Group demos by year
 	SortGameType   bool     // Group demos by game type
+	KeepPrefix     bool     // Rename options won't overwrite a detected ds_prefix
 	RenameMap      bool     // Rename the demo to contain the map name
-	RenameDate     bool     // Rename the demo to contain the recorded/edited date
-	RenameTime     bool     // Rename the demo to contain the recored/edited time
 	RenameDuration bool     // Rename demo to contain the duration of the demo
 	SearchFolders  bool     // Search for folders within the current directory
 	Multithread    bool     // Allow the use of multiple cores / threads
-	DateFormat     uint8    // 0: YYYY-MM-DD | 1: MM-DD-YYYY | 2 DD-MM-YYYY
+	DateFormat     uint8    // 0: YYYY-MM-DD | 1: MM-DD-YYYY | 2: DD-MM-YYYY
 	TimeFormat     uint8    // 0: 24hr | 1: 12hr
 	ZipOlderThan   uint8    // Zip demos older than this many years
 	CullBelow      uint8    // Number of seconds that demos below that duration will be deleted
@@ -40,7 +39,7 @@ func parseBoolArg(args []string, str string, message string) bool {
 		case "1":
 			fallthrough
 		case "true":
-			fmt.Println(message)
+			fmt.Print(message)
 			return true
 		case "0":
 			fallthrough
@@ -66,11 +65,11 @@ func parseIntArg(args []string, str string, message string) uint8 {
 
 		// If value wouldn't fit
 		if value > 255 {
-			log.Printf("Invalid argument value: %s = %s\tMaximum value: 255", args[i], args[i+1])
+			log.Printf("Invalid argument value: %s = %s\tMaximum value: 255\n", args[i], args[i+1])
 			enterToExit(false)
 		}
 
-		fmt.Println(message)
+		fmt.Print(message)
 		return uint8(value)
 	}
 
@@ -79,21 +78,20 @@ func parseIntArg(args []string, str string, message string) uint8 {
 
 /* Gets argument values */
 func getArgs() Arguments {
-	const Silent = "silent"
-	const SortYear = "sortyear"
-	const SortGameType = "sortgametype"
-	const RenameMap = "renamemap"
-	const RenameDate = "renamedate"
-	const RenameTime = "renametime"
-	const RenameDuration = "renameduration"
-	const SearchFolders = "searchfolders"
-	const Multithread = "multithread"
-	const DateFormat = "dateformat"
-	const TimeFormat = "timeformat"
-	const ZipOlderThan = "zipolderthan"
-	const CullBelow = "cullbelow"
-	const MajorDirectory = "majordirectory"
-	const IgnoreWords = "ignorewords"
+	const Silent = "silent"                 // Done
+	const SortYear = "sortyear"             // TODO
+	const SortGameType = "sortgametype"     // TODO
+	const KeepPrefix = "keepprefix"         // Done
+	const RenameMap = "renamemap"           // Done
+	const RenameDuration = "renameduration" // Done
+	const SearchFolders = "searchfolders"   // TODO
+	const Multithread = "multithread"       // TODO: Partial
+	const DateFormat = "dateformat"         // Done
+	const TimeFormat = "timeformat"         // Done
+	const ZipOlderThan = "zipolderthan"     // TODO
+	const CullBelow = "cullbelow"           // TODO
+	const MajorDirectory = "majordirectory" // TODO
+	const IgnoreWords = "ignorewords"       // Done
 
 	// Convert args to lower case
 	var args []string
@@ -106,9 +104,8 @@ func getArgs() Arguments {
 		Silent:         false,
 		SortYear:       true,
 		SortGameType:   true,
-		RenameMap:      true,
-		RenameDate:     true,
-		RenameTime:     true,
+		KeepPrefix:     true,
+		RenameMap:      false,
 		RenameDuration: false,
 		SearchFolders:  false,
 		Multithread:    true,
@@ -119,18 +116,17 @@ func getArgs() Arguments {
 		MajorDirectory: 0,
 		IgnoreWords:    []string{"reference"},
 	}
-	a.Silent = parseBoolArg(args, Silent, "Running silently")
-	a.SortYear = parseBoolArg(args, SortYear, "Sorting years")
-	a.SortGameType = parseBoolArg(args, SortGameType, "Sorting game types")
-	a.RenameMap = parseBoolArg(args, RenameMap, "Renaming with map name")
-	a.RenameDate = parseBoolArg(args, RenameDate, "Renaming with record date")
-	a.RenameTime = parseBoolArg(args, RenameTime, "Renaming with record time")
-	a.RenameDuration = parseBoolArg(args, RenameDuration, "Rename with demo duration")
-	a.SearchFolders = parseBoolArg(args, SearchFolders, "Searching folders")
-	a.Multithread = parseBoolArg(args, Multithread, "Multithreading set")
+	a.Silent = parseBoolArg(args, Silent, "Running silently\n")
+	a.SortYear = parseBoolArg(args, SortYear, "Sorting years\n")
+	a.SortGameType = parseBoolArg(args, SortGameType, "Sorting game types\n")
+	a.KeepPrefix = parseBoolArg(args, KeepPrefix, "Keeping demo prefixes\n")
+	a.RenameMap = parseBoolArg(args, RenameMap, "Renaming with map name\n")
+	a.RenameDuration = parseBoolArg(args, RenameDuration, "Rename with demo duration\n")
+	a.SearchFolders = parseBoolArg(args, SearchFolders, "Searching folders\n")
+	a.Multithread = parseBoolArg(args, Multithread, "Multithreading set\n")
 
 	// Get int arg values
-	a.DateFormat = uint8(parseIntArg(args, DateFormat, "Date format set"))
+	a.DateFormat = uint8(parseIntArg(args, DateFormat, "Date format set\n"))
 	if a.DateFormat > 2 {
 		log.Printf("Invalid date format: %d\tMust be 0, 1, or 2\n", a.DateFormat)
 		enterToExit(false)
@@ -199,7 +195,11 @@ func main() {
 	demoListCount := len(demoList)
 	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
-	//fmt.Println(time.Now().Clock())
+	// Get new names
+	dateTimeFormat := demoio.GetTimeFormat(args.DateFormat, args.TimeFormat)
+	demoio.GetNewNames(demoList, dateTimeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
+
+	// TODO: This is currently not ideal
 	years := demoio.GroupYears(demoList)
 
 	for year, demos := range years {
@@ -254,9 +254,10 @@ func main() {
 		// Move files to corresponding directories
 		dirPrefix := filepath.Join(strconv.Itoa(year)+"demos", "")
 		var movers sync.WaitGroup
-		movers.Go(func() { demoio.MoveToDirectory(dirPrefix+"casual", casualDemos) })
-		movers.Go(func() { demoio.MoveToDirectory(dirPrefix+"mvm", mvmDemos) })
-		movers.Go(func() { demoio.MoveToDirectory(dirPrefix+"tournament", tournamentDemos) })
+		// TODO Format wishDir = sprintf(majorDir/minorDir)
+		movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "casual"), casualDemos) })
+		movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "mvm"), mvmDemos) })
+		movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "tournament"), tournamentDemos) })
 		movers.Wait()
 	}
 
