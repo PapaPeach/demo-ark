@@ -22,9 +22,25 @@ type Demo struct {
 	Duration float32
 }
 
-// TODO: Use date in filename if possible
+/* Culls demos shorter than a specified minimum length */
+func CullShortDemos(demos *[]Demo, min uint8) []Demo {
+	var cull []Demo
+	keep := (*demos)[:0]
+	for _, demo := range *demos {
+		if demo.Duration < float32(min) { // If short than minimum, move it to cull list
+			cull = append(cull, demo)
+		} else { // If longer than minimum, keep it in main demo list
+			keep = append(keep, demo)
+		}
+	}
+
+	*demos = keep
+	return cull
+}
+
+// TODO: Use date from filename if possible
 /* Generates a time format string based on arguments */
-func GetTimeFormat(dateFormat uint8, timeFormat uint8) string {
+func GetTimeFormat(dateFormat uint8, twelveHourTime bool) string {
 	// Format date
 	var date string
 	switch dateFormat {
@@ -40,12 +56,9 @@ func GetTimeFormat(dateFormat uint8, timeFormat uint8) string {
 
 	// Format time
 	var time string
-	switch timeFormat {
-	default:
-		fallthrough
-	case 0: // 24 hr
+	if twelveHourTime {
 		time = "15-04-05"
-	case 1: // 12 hr
+	} else {
 		time = "03-04-05"
 	}
 

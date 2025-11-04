@@ -18,17 +18,18 @@ type Demo = demoio.Demo
 type Arguments struct {
 	Silent         bool     // Run program without prompts
 	SortYear       bool     // Group demos by year
+	SortMonth      bool     // Group demos by month
 	SortGameType   bool     // Group demos by game type
 	KeepPrefix     bool     // Rename options won't overwrite a detected ds_prefix
 	RenameMap      bool     // Rename the demo to contain the map name
 	RenameDuration bool     // Rename demo to contain the duration of the demo
-	SearchFolders  bool     // Search for folders within the current directory
+	SearchDirs     bool     // Search for subdirectories within the current directory
 	Multithread    bool     // Allow the use of multiple cores / threads
+	DateMajorDir   bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
+	TwelveHourTime bool     // True: 12hr | false: 24hr
 	DateFormat     uint8    // 0: YYYY-MM-DD | 1: MM-DD-YYYY | 2: DD-MM-YYYY
-	TimeFormat     uint8    // 0: 24hr | 1: 12hr
 	ZipOlderThan   uint8    // Zip demos older than this many years
 	CullBelow      uint8    // Number of seconds that demos below that duration will be deleted
-	MajorDirectory uint8    // 0: year/gametype/demo.dem | 1: gametype/year/demo.dem
 	IgnoreWords    []string // Ignore file / folder names containing string
 }
 
@@ -78,20 +79,21 @@ func parseIntArg(args []string, str string, message string) uint8 {
 
 /* Gets argument values */
 func getArgs() Arguments {
-	const Silent = "silent"                 // Done
+	const Silent = "silent"                 //
 	const SortYear = "sortyear"             // TODO
+	const SortMonth = "sortmonth"           // TODO
 	const SortGameType = "sortgametype"     // TODO
-	const KeepPrefix = "keepprefix"         // Done
-	const RenameMap = "renamemap"           // Done
-	const RenameDuration = "renameduration" // Done
-	const SearchFolders = "searchfolders"   // TODO
+	const KeepPrefix = "keepprefix"         //
+	const RenameMap = "renamemap"           //
+	const RenameDuration = "renameduration" //
+	const SearchDirs = "searchdirs"         // TODO
 	const Multithread = "multithread"       // TODO: Partial
-	const DateFormat = "dateformat"         // Done
-	const TimeFormat = "timeformat"         // Done
+	const DateMajorDir = "datemajordir"     // TODO
+	const TwelveHourTime = "twelvehourtime" //
+	const DateFormat = "dateformat"         //
 	const ZipOlderThan = "zipolderthan"     // TODO
 	const CullBelow = "cullbelow"           // TODO
-	const MajorDirectory = "majordirectory" // TODO
-	const IgnoreWords = "ignorewords"       // Done
+	const IgnoreWords = "ignorewords"       //
 
 	// Convert args to lower case
 	var args []string
@@ -103,27 +105,31 @@ func getArgs() Arguments {
 	a := Arguments{
 		Silent:         false,
 		SortYear:       true,
+		SortMonth:      false,
 		SortGameType:   true,
 		KeepPrefix:     true,
 		RenameMap:      false,
 		RenameDuration: false,
-		SearchFolders:  false,
+		SearchDirs:     false,
 		Multithread:    true,
+		DateMajorDir:   true,
+		TwelveHourTime: false,
 		DateFormat:     0,
-		TimeFormat:     0,
 		ZipOlderThan:   1,
 		CullBelow:      10,
-		MajorDirectory: 0,
 		IgnoreWords:    []string{"reference"},
 	}
-	a.Silent = parseBoolArg(args, Silent, "Running silently\n")
+	a.Silent = parseBoolArg(args, Silent, "Running silently\n") // TODO: make these say "[Description] set to [value]"
 	a.SortYear = parseBoolArg(args, SortYear, "Sorting years\n")
+	a.SortMonth = parseBoolArg(args, SortMonth, "Sorting months\n")
 	a.SortGameType = parseBoolArg(args, SortGameType, "Sorting game types\n")
 	a.KeepPrefix = parseBoolArg(args, KeepPrefix, "Keeping demo prefixes\n")
 	a.RenameMap = parseBoolArg(args, RenameMap, "Renaming with map name\n")
-	a.RenameDuration = parseBoolArg(args, RenameDuration, "Rename with demo duration\n")
-	a.SearchFolders = parseBoolArg(args, SearchFolders, "Searching folders\n")
+	a.RenameDuration = parseBoolArg(args, RenameDuration, "Renaming with demo duration\n")
+	a.SearchDirs = parseBoolArg(args, SearchDirs, "Searching folders\n")
 	a.Multithread = parseBoolArg(args, Multithread, "Multithreading set\n")
+	a.DateMajorDir = parseBoolArg(args, DateMajorDir, "Date major directory set\n")
+	a.TwelveHourTime = parseBoolArg(args, TwelveHourTime, "Using twelve-hour time\n")
 
 	// Get int arg values
 	a.DateFormat = uint8(parseIntArg(args, DateFormat, "Date format set\n"))
@@ -132,42 +138,8 @@ func getArgs() Arguments {
 		enterToExit(false)
 	}
 
-	a.TimeFormat = uint8(parseIntArg(args, TimeFormat, ""))
-	if slices.Contains(args, TimeFormat) {
-		switch a.TimeFormat {
-		case 24:
-			a.TimeFormat = 0
-			fallthrough
-		case 0: // 24hr
-			fmt.Println("Time format set to 24hr")
-		case 12:
-			a.TimeFormat = 1
-			fallthrough
-		case 1: //12hr
-			fmt.Println("Time format set to 12hr")
-		default:
-			log.Printf("Invalid time format value: %d\tMust be 0, 1, 12, or 24\n", a.TimeFormat)
-			enterToExit(false)
-		}
-	}
-
 	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan, "Zipping old demos"))
 	a.CullBelow = uint8(parseIntArg(args, CullBelow, "Culling short demos"))
-
-	// Get major directory
-	if i := slices.Index(args, MajorDirectory); i != -1 {
-		switch args[i+1] {
-		case "year":
-			a.MajorDirectory = 0
-			fmt.Println("Major directory set to year")
-		case "gametype":
-			a.MajorDirectory = 1
-			fmt.Println("Major directory set to gametype")
-		default:
-			log.Printf("Invalid argument value: %s = %s\n", args[i], args[i+1])
-			enterToExit(false)
-		}
-	}
 
 	// Get ignore words
 	if i := slices.Index(args, IgnoreWords); i != -1 {
@@ -196,7 +168,7 @@ func main() {
 	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
 	// Get new names
-	dateTimeFormat := demoio.GetTimeFormat(args.DateFormat, args.TimeFormat)
+	dateTimeFormat := demoio.GetTimeFormat(args.DateFormat, args.TwelveHourTime)
 	demoio.GetNewNames(demoList, dateTimeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
 
 	// TODO: This is currently not ideal
