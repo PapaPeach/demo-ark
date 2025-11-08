@@ -34,36 +34,18 @@ func CullShortDemos(demos *[]Demo, min uint8) []Demo {
 		}
 	}
 
+	// Update demos list
 	*demos = keep
 	return cull
 }
 
-// TODO: Use date from filename if possible
 /* Generates a time format string based on arguments */
-func GetTimeFormat(dateFormat uint8, twelveHourTime bool) string {
-	// Format date
-	var date string
-	switch dateFormat {
-	default:
-		fallthrough
-	case 0: // YYYY-MM-DD
-		date = "2006-01-02"
-	case 1: // MM-DD-YYYY
-		date = "01-02-2006"
-	case 2: // DD-MM-YYYY
-		date = "02-01-2006"
-	}
-
+func GetTimeFormat(twelveHourTime bool) string {
 	// Format time
-	var time string
 	if twelveHourTime {
-		time = "15-04-05"
-	} else {
-		time = "03-04-05"
+		return "15-04-05"
 	}
-
-	// Combine date_time
-	return fmt.Sprintf("%s_%s", date, time)
+	return "03-04-05"
 }
 
 /* Generates new names for demos to according to the arguments provided */
@@ -74,6 +56,7 @@ func GetNewNames(demos []Demo, dateTimeFormat string, keepPrefix bool, renameMap
 			return
 		}
 
+		// TODO: Use date from filename if possible
 		// Get prefix
 		var prefix string
 		if keepPrefix {

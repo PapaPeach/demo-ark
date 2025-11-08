@@ -26,10 +26,13 @@ type Arguments struct {
 	SearchDirs     bool     // Search for subdirectories within the current directory
 	Multithread    bool     // Allow the use of multiple cores / threads
 	DateMajorDir   bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
+	UseEditDate    bool     // Use the date that a demo was last edited rather than date in its file name
 	TwelveHourTime bool     // True: 12hr | false: 24hr
-	DateFormat     uint8    // 0: YYYY-MM-DD | 1: MM-DD-YYYY | 2: DD-MM-YYYY
+	SetAsideCulled bool     // Set aside culled demos to a "culled" directory, rather than deleting them
+	ShowConVars    bool     // Outputs console variables parsed from demo (mainly for debugging)
 	ZipOlderThan   uint8    // Zip demos older than this many years
 	CullBelow      uint8    // Number of seconds that demos below that duration will be deleted
+	Snipe          string   // Snipe a specific file (exactly) to execute program on (mainly for debugging)
 	IgnoreWords    []string // Ignore file / folder names containing string
 }
 
@@ -89,10 +92,13 @@ func getArgs() Arguments {
 	const SearchDirs = "searchdirs"         // TODO
 	const Multithread = "multithread"       // TODO: Partial
 	const DateMajorDir = "datemajordir"     // TODO
+	const UseEditDate = "useeditdate"       // TODO
 	const TwelveHourTime = "twelvehourtime" //
-	const DateFormat = "dateformat"         //
+	const ShowConVars = "showconvars"       // TODO
+	const SetAsideCulled = "setasideculled" // TODO
 	const ZipOlderThan = "zipolderthan"     // TODO
 	const CullBelow = "cullbelow"           // TODO
+	const Snipe = "snipe"                   // TODO
 	const IgnoreWords = "ignorewords"       //
 
 	// Convert args to lower case
@@ -101,7 +107,7 @@ func getArgs() Arguments {
 		args = append(args, strings.ToLower(arg))
 	}
 
-	// Get bool arg values
+	// Set defaults
 	a := Arguments{
 		Silent:         false,
 		SortYear:       true,
@@ -113,12 +119,17 @@ func getArgs() Arguments {
 		SearchDirs:     false,
 		Multithread:    true,
 		DateMajorDir:   true,
+		UseEditDate:    false,
 		TwelveHourTime: false,
-		DateFormat:     0,
+		ShowConVars:    false,
 		ZipOlderThan:   1,
 		CullBelow:      10,
+		Snipe:          "",
 		IgnoreWords:    []string{"reference"},
 	}
+
+	// TODO: Redo argument system to just be "argument=value"
+	// Get bool arg values
 	a.Silent = parseBoolArg(args, Silent, "Running silently\n") // TODO: make these say "[Description] set to [value]"
 	a.SortYear = parseBoolArg(args, SortYear, "Sorting years\n")
 	a.SortMonth = parseBoolArg(args, SortMonth, "Sorting months\n")
@@ -129,17 +140,19 @@ func getArgs() Arguments {
 	a.SearchDirs = parseBoolArg(args, SearchDirs, "Searching folders\n")
 	a.Multithread = parseBoolArg(args, Multithread, "Multithreading set\n")
 	a.DateMajorDir = parseBoolArg(args, DateMajorDir, "Date major directory set\n")
+	a.UseEditDate = parseBoolArg(args, UseEditDate, "Using date that demo was last edited\n")
 	a.TwelveHourTime = parseBoolArg(args, TwelveHourTime, "Using twelve-hour time\n")
+	a.ShowConVars = parseBoolArg(args, ShowConVars, "Showing console variables from demos\n")
 
 	// Get int arg values
-	a.DateFormat = uint8(parseIntArg(args, DateFormat, "Date format set\n"))
-	if a.DateFormat > 2 {
-		log.Printf("Invalid date format: %d\tMust be 0, 1, or 2\n", a.DateFormat)
-		enterToExit(false)
-	}
-
 	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan, "Zipping old demos"))
 	a.CullBelow = uint8(parseIntArg(args, CullBelow, "Culling short demos"))
+
+	// Get snipe file
+	if i := slices.Index(args, Snipe); i != -1 {
+		a.Snipe = args[i+1]
+		fmt.Println("Sniping:", a.Snipe)
+	}
 
 	// Get ignore words
 	if i := slices.Index(args, IgnoreWords); i != -1 {
@@ -168,8 +181,8 @@ func main() {
 	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
 	// Get new names
-	dateTimeFormat := demoio.GetTimeFormat(args.DateFormat, args.TwelveHourTime)
-	demoio.GetNewNames(demoList, dateTimeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
+	timeFormat := demoio.GetTimeFormat(args.TwelveHourTime)
+	demoio.GetNewNames(demoList, timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
 
 	// TODO: This is currently not ideal
 	years := demoio.GroupYears(demoList)
