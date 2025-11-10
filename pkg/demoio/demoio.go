@@ -49,7 +49,7 @@ func GetTimeFormat(twelveHourTime bool) string {
 }
 
 /* Gets the date from a demo's name */
-func GetDate(demo Demo) time.Time {
+func GetDateTime(demo Demo) time.Time {
 	// Search for valid date my locating year via: prefix[20]YY-MM-DD_HH-MM-SS
 	skipped := 0
 	for i := strings.Index(demo.Name, "20"); i > -1; i = strings.Index(demo.Name[skipped:], "20") {
@@ -61,85 +61,45 @@ func GetDate(demo Demo) time.Time {
 			fmt.Println(err)
 			continue
 		}
-		/* I'm pushing this because it's cool. I'll delete it later :)
-		// Try to extract date
-		year, month, day := 0, 0, 0
-		matches, err := fmt.Sscanf(demo.Name[dateIndex:dateIndex+10], "%d-%d-%d", &year, &month, &day)
-		if err != nil && !(err.Error() == "expected integer" || err.Error() == "input does not match format") {
-			fmt.Printf("Error parsing date from \"%s\": %s", demo.Name[dateIndex:dateIndex+10], err)
-			os.Exit(1)
-		}
-
-		// If we didn't find our dates
-		if matches != 3 {
-			continue
-		}
-
-		// Check if year is probably right
-		if year < 2000 || 2100 < year {
-			fmt.Printf("%d is not a year\n", year)
-			continue
-		}
-
-		// Check if month is probably right
-		if month < 1 || 12 < month {
-			fmt.Printf("%d is not a month\n", month)
-			continue
-		}
-
-		// Check if day is probably right
-		if day < 1 || 31 < day {
-			fmt.Printf("%d is not a day\n", day)
-			continue
-		}
-
-		fmt.Printf("Date detected: y%d_m%02d_d%02d\n", year, month, day)
-		*/
 
 		return titleDateTime
 	}
+
+	// Fallback value
 	return demo.DateTime
 }
 
 /* Generates new names for demos to according to the arguments provided */
-func GetNewNames(demos []Demo, dateTimeFormat string, keepPrefix bool, renameMap bool, renameDuration bool) {
-	for i := range demos {
-		// If neither are set, just use NewName = Name (set via GetDemos)
-		if !(renameMap || renameDuration) {
-			return
+func GetNewName(demo Demo, dateTimeFormat string, keepPrefix bool, renameMap bool, renameDuration bool) {
+	// Get prefix
+	var wishName string
+	if keepPrefix {
+		// Locate prefix by indexing off year
+		yearString := strconv.Itoa(demo.DateTime.Year())
+		if yearIdx := strings.Index(demo.Name, yearString); yearIdx != -1 {
+			wishName = demo.Name[:yearIdx] + "_"
+		} else {
+			demIdx := strings.Index(demo.Name, ".dem")
+			wishName = demo.Name[:demIdx] + "_"
 		}
-
-		// TODO: Use date from filename if possible
-		// Get prefix
-		var prefix string
-		if keepPrefix {
-			yearString := strconv.Itoa(demos[i].DateTime.Year())
-			if yearIdx := strings.Index(demos[i].Name, yearString); yearIdx != -1 {
-				prefix = demos[i].Name[:yearIdx] + "_"
-			} else {
-				demIdx := strings.Index(demos[i].Name, ".dem")
-				prefix = demos[i].Name[:demIdx] + "_"
-			}
-		}
-		wishName := prefix
-
-		// Add map name
-		if renameMap {
-			wishName += demos[i].Map + "_"
-		}
-
-		// Add date and time of creation / edit
-		wishName += demos[i].DateTime.Format(dateTimeFormat)
-
-		// Add duration
-		if renameDuration {
-			length := int(demos[i].Duration)
-			wishName = fmt.Sprintf("%s_%d-%02d", wishName, length/60, length%60)
-		}
-
-		// Add .dem and set demo's new name
-		demos[i].NewName = wishName + ".dem"
 	}
+
+	// Add map name
+	if renameMap {
+		wishName += demo.Map + "_"
+	}
+
+	// Add date and time of creation / edit
+	wishName += demo.DateTime.Format(dateTimeFormat)
+
+	// Add duration
+	if renameDuration {
+		length := int(demo.Duration)
+		wishName = fmt.Sprintf("%s_%d-%02d", wishName, length/60, length%60)
+	}
+
+	// Add .dem and set demo's new name
+	demo.NewName = wishName + ".dem"
 }
 
 /* Returns a list of .dem files in the current directory */

@@ -92,7 +92,7 @@ func getArgs() Arguments {
 	const SearchDirs = "searchdirs"         // TODO
 	const Multithread = "multithread"       // TODO: Partial
 	const DateMajorDir = "datemajordir"     // TODO
-	const UseEditDate = "useeditdate"       // TODO
+	const UseEditDate = "useeditdate"       //
 	const TwelveHourTime = "twelvehourtime" //
 	const ShowConVars = "showconvars"       // TODO
 	const SetAsideCulled = "setasideculled" // TODO
@@ -129,8 +129,9 @@ func getArgs() Arguments {
 	}
 
 	// TODO: Redo argument system to just be "argument=value"
+	// TODO: make these say "[Description] set to [value]"
 	// Get bool arg values
-	a.Silent = parseBoolArg(args, Silent, "Running silently\n") // TODO: make these say "[Description] set to [value]"
+	a.Silent = parseBoolArg(args, Silent, "Running silently\n")
 	a.SortYear = parseBoolArg(args, SortYear, "Sorting years\n")
 	a.SortMonth = parseBoolArg(args, SortMonth, "Sorting months\n")
 	a.SortGameType = parseBoolArg(args, SortGameType, "Sorting game types\n")
@@ -180,11 +181,24 @@ func main() {
 	demoListCount := len(demoList)
 	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
-	// Get new names
-	timeFormat := demoio.GetTimeFormat(args.TwelveHourTime)
-	demoio.GetNewNames(demoList, timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
+	// Do incrementing through demoList here
+	for i := range demoList {
+		// Get date and times from demo title
+		if !args.UseEditDate {
+			demoList[i].DateTime = demoio.GetDateTime(demoList[i])
+		}
+
+		// Get new names
+		if args.RenameMap || args.RenameDuration {
+			timeFormat := demoio.GetTimeFormat(args.TwelveHourTime)
+			demoio.GetNewName(demoList[i], timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
+		}
+	}
 
 	// TODO: This is currently not ideal
+	// Ideally, when we move demos we just check if a year has been seen before.
+	// If not, then we handle the file and remember that we've seen that year.
+	// If we are using DateMajorDir = false then we handle/remember on a per-gametype basis.
 	years := demoio.GroupYears(demoList)
 
 	for year, demos := range years {
