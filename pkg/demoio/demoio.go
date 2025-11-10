@@ -18,7 +18,7 @@ type Demo struct {
 	Name     string
 	NewName  string
 	Map      string
-	ModTime  time.Time
+	DateTime time.Time
 	Duration float32
 }
 
@@ -43,9 +43,62 @@ func CullShortDemos(demos *[]Demo, min uint8) []Demo {
 func GetTimeFormat(twelveHourTime bool) string {
 	// Format time
 	if twelveHourTime {
-		return "15-04-05"
+		return "03-04-05"
 	}
-	return "03-04-05"
+	return "15-04-05"
+}
+
+/* Gets the date from a demo's name */
+func GetDate(demo Demo) time.Time {
+	// Search for valid date my locating year via: prefix[20]YY-MM-DD_HH-MM-SS
+	skipped := 0
+	for i := strings.Index(demo.Name, "20"); i > -1; i = strings.Index(demo.Name[skipped:], "20") {
+		dateIndex := skipped + i
+		skipped += i + 1
+
+		titleDateTime, err := time.Parse("2006-01-02_15-04-05", demo.Name[dateIndex:dateIndex+19])
+		if err != nil { // This might error. We keep searching or fallback to demo's ModTime
+			fmt.Println(err)
+			continue
+		}
+		/* I'm pushing this because it's cool. I'll delete it later :)
+		// Try to extract date
+		year, month, day := 0, 0, 0
+		matches, err := fmt.Sscanf(demo.Name[dateIndex:dateIndex+10], "%d-%d-%d", &year, &month, &day)
+		if err != nil && !(err.Error() == "expected integer" || err.Error() == "input does not match format") {
+			fmt.Printf("Error parsing date from \"%s\": %s", demo.Name[dateIndex:dateIndex+10], err)
+			os.Exit(1)
+		}
+
+		// If we didn't find our dates
+		if matches != 3 {
+			continue
+		}
+
+		// Check if year is probably right
+		if year < 2000 || 2100 < year {
+			fmt.Printf("%d is not a year\n", year)
+			continue
+		}
+
+		// Check if month is probably right
+		if month < 1 || 12 < month {
+			fmt.Printf("%d is not a month\n", month)
+			continue
+		}
+
+		// Check if day is probably right
+		if day < 1 || 31 < day {
+			fmt.Printf("%d is not a day\n", day)
+			continue
+		}
+
+		fmt.Printf("Date detected: y%d_m%02d_d%02d\n", year, month, day)
+		*/
+
+		return titleDateTime
+	}
+	return demo.DateTime
 }
 
 /* Generates new names for demos to according to the arguments provided */
@@ -60,7 +113,7 @@ func GetNewNames(demos []Demo, dateTimeFormat string, keepPrefix bool, renameMap
 		// Get prefix
 		var prefix string
 		if keepPrefix {
-			yearString := strconv.Itoa(demos[i].ModTime.Year())
+			yearString := strconv.Itoa(demos[i].DateTime.Year())
 			if yearIdx := strings.Index(demos[i].Name, yearString); yearIdx != -1 {
 				prefix = demos[i].Name[:yearIdx] + "_"
 			} else {
@@ -76,7 +129,7 @@ func GetNewNames(demos []Demo, dateTimeFormat string, keepPrefix bool, renameMap
 		}
 
 		// Add date and time of creation / edit
-		wishName += demos[i].ModTime.Format(dateTimeFormat)
+		wishName += demos[i].DateTime.Format(dateTimeFormat)
 
 		// Add duration
 		if renameDuration {
@@ -122,7 +175,7 @@ func GetDemos(ignoreWords []string) []Demo {
 			}
 			header := parser.ReadHeader(f)
 
-			demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, ModTime: file.ModTime(), Duration: header.PlaybackTime}
+			demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, DateTime: file.ModTime(), Duration: header.PlaybackTime}
 			demos = append(demos, demo)
 			f.Close()
 		}
@@ -190,7 +243,7 @@ func GroupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
 func GroupYears(demos []Demo) map[int][]Demo {
 	years := make(map[int][]Demo)
 	for _, demo := range demos {
-		years[demo.ModTime.Year()] = append(years[demo.ModTime.Year()], demo)
+		years[demo.DateTime.Year()] = append(years[demo.DateTime.Year()], demo)
 	}
 
 	return years
