@@ -15,11 +15,12 @@ import (
 )
 
 type Demo struct {
-	Name     string
-	NewName  string
-	Map      string
-	DateTime time.Time
-	Duration float32
+	Name     string    // Current file name of demo
+	NewName  string    // Desired rename for demo
+	Map      string    // Map demo was recorded on
+	DateTime time.Time // Date and time demo was recorded / edited
+	Duration float32   // Duration of demo in seconds
+	GameType uint8     // 0: Tournament | 1: Casual | 2: MvM
 }
 
 /* Culls demos shorter than a specified minimum length */
@@ -29,6 +30,7 @@ func CullShortDemos(demos *[]Demo, min uint8) []Demo {
 	for _, demo := range *demos {
 		if demo.Duration < float32(min) { // If short than minimum, move it to cull list
 			cull = append(cull, demo)
+			fmt.Printf("Marked short demo for culling: %s\tduration: %.3f seconds\n", demo.Name, demo.Duration)
 		} else { // If longer than minimum, keep it in main demo list
 			keep = append(keep, demo)
 		}
@@ -70,7 +72,7 @@ func GetDateTime(demo Demo) time.Time {
 }
 
 /* Generates new names for demos to according to the arguments provided */
-func GetNewName(demo Demo, dateTimeFormat string, keepPrefix bool, renameMap bool, renameDuration bool) {
+func GetNewName(demo *Demo, dateTimeFormat string, keepPrefix bool, renameMap bool, renameDuration bool) {
 	// Get prefix
 	var wishName string
 	if keepPrefix {
@@ -100,6 +102,40 @@ func GetNewName(demo Demo, dateTimeFormat string, keepPrefix bool, renameMap boo
 
 	// Add .dem and set demo's new name
 	demo.NewName = wishName + ".dem"
+}
+
+/* Get game type of demo (0: Tournament | 1: Casual | 2: MvM) */
+func GetGameType(demo *Demo) {
+	// Determine if MvM via map prefix in header
+	if strings.HasPrefix(demo.Map, "mvm_") {
+		demo.GameType = 2
+		return
+	}
+
+	// Get message contents
+	file, err := os.Open(demo.Name)
+	if err != nil {
+		fmt.Printf("Error opening %v: %v", demo.Name, err)
+		return
+	}
+	defer file.Close()
+	file.Seek(1072, io.SeekStart) // Skip header of known length
+	msg := parser.ReadMessage(file)
+
+	// Determine if casual via specific conVar values
+	for _, sc := range msg.ParsedData.SetConVar {
+		// Check if tournament 1, stopwatch 0, readymode 1, readymode_min 0
+		if CheckConVar(sc.ConVars, "mp_tournament", "1") &&
+			CheckConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
+			CheckConVar(sc.ConVars, "mp_tournament_readymode", "1") &&
+			CheckConVar(sc.ConVars, "mp_tournament_readymode_min", "0") {
+			demo.GameType = 1
+			return
+		}
+	}
+
+	// Assume file is tournament type if it's not the others
+	demo.GameType = 0
 }
 
 /* Returns a list of .dem files in the current directory */
@@ -135,7 +171,7 @@ func GetDemos(ignoreWords []string) []Demo {
 			}
 			header := parser.ReadHeader(f)
 
-			demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, DateTime: file.ModTime(), Duration: header.PlaybackTime}
+			demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, DateTime: file.ModTime(), Duration: header.PlaybackTime, GameType: 0}
 			demos = append(demos, demo)
 			f.Close()
 		}
@@ -151,6 +187,106 @@ func CheckConVar(conVars []string, wishStr string, wishVal string) bool {
 		return true
 	}
 	return false
+}
+
+// TODO: Update _events.json
+/* Moves files in a list of files to a directory */
+func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, setAsideCulled bool) {
+	// Handle length accordingly
+	switch length := len(demos); length {
+	case 0: // Skip to culling if no demos to sort
+		goto cull
+	case 1: // Singular demo file
+		fmt.Printf("Sorting %d demo...\n", length)
+	default: // Plural demos
+		fmt.Printf("Sorting %d demos...\n", length)
+	}
+
+	// Sort demos into year and/or gametype
+	if sortYear || sortGameType {
+		for _, demo := range demos {
+			// Get game type
+			gameType := ""
+			if sortGameType {
+				GetGameType(&demo)
+				switch demo.GameType {
+				case 0:
+					gameType = "tournament"
+				case 1:
+					gameType = "casual"
+				case 2:
+					gameType = "mvm"
+				}
+			}
+
+			// Get year as a string
+			year := ""
+			if sortYear {
+				year = strconv.Itoa(demo.DateTime.Year())
+			}
+
+			// Get name of directory to move demo to
+			wishDir := "demos_"
+			if dateMajorDir {
+				wishDir += filepath.Join(year, gameType)
+			} else {
+				wishDir += filepath.Join(gameType, year)
+			}
+
+			// Make directory to move demo to
+			err := os.MkdirAll(wishDir, os.ModePerm)
+			if err != nil && !errors.Is(err, os.ErrExist) {
+				log.Println(err)
+				os.Exit(1)
+			}
+
+			// Move demo to directory and rename
+			err = os.Rename(demo.Name, filepath.Join(wishDir, demo.NewName))
+			if err != nil {
+				log.Println(err)
+			}
+		}
+	}
+
+cull:
+	// If there's no demos to cull, skip
+	length := len(culled)
+	if length == 0 {
+		return
+	}
+
+	// Handle length accordingly
+	if length == 1 {
+		fmt.Println("Culling 1 demo...")
+	} else { // Plural demos
+		fmt.Printf("Culling %d demos...\n", length)
+	}
+
+	// Create the culled directory
+	culledDir := "demos_culled"
+	if setAsideCulled {
+		// Make directory to move demo to
+		err := os.MkdirAll(culledDir, os.ModePerm)
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			log.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	// Cull demos
+	for _, demo := range culled {
+		// Delete culled demos
+		if !setAsideCulled {
+			os.Remove(demo.Name)
+			continue
+		}
+
+		// Move demo to culled directory
+		err := os.Rename(demo.Name, filepath.Join(culledDir, demo.NewName))
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 /* Group demos by gametype */

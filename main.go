@@ -5,12 +5,9 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 )
 
 type Demo = demoio.Demo
@@ -37,7 +34,7 @@ type Arguments struct {
 }
 
 /* Parses boolean arguments and returns the boolean value */
-func parseBoolArg(args []string, keyword string, message string) bool {
+func parseBoolArg(args []string, keyword string, def bool, message string) bool {
 	for _, arg := range args {
 		// Locate keyword=...
 		if strings.HasPrefix(arg, keyword+"=") {
@@ -59,11 +56,11 @@ func parseBoolArg(args []string, keyword string, message string) bool {
 		}
 	}
 
-	return false
+	return def
 }
 
 /* Parses integer arguments and returns the integer value */
-func parseIntArg(args []string, keyword string) uint8 {
+func parseIntArg(args []string, keyword string, def uint8) uint8 {
 	for _, arg := range args {
 		// Locate keyword=...
 		if strings.HasPrefix(arg, keyword+"=") {
@@ -83,7 +80,7 @@ func parseIntArg(args []string, keyword string) uint8 {
 		}
 	}
 
-	return 0
+	return def
 }
 
 /* Gets argument values */
@@ -136,29 +133,29 @@ func getArgs() Arguments {
 	}
 
 	// Get bool arg values
-	a.Silent = parseBoolArg(args, Silent, "running silently")
-	a.SortYear = parseBoolArg(args, SortYear, "sorting years")
-	a.SortMonth = parseBoolArg(args, SortMonth, "sorting months")
-	a.SortGameType = parseBoolArg(args, SortGameType, "sorting game types")
-	a.KeepPrefix = parseBoolArg(args, KeepPrefix, "keeping demo prefixes")
-	a.RenameMap = parseBoolArg(args, RenameMap, "renaming with map name")
-	a.RenameDuration = parseBoolArg(args, RenameDuration, "renaming with demo duration")
-	a.SearchDirs = parseBoolArg(args, SearchDirs, "searching folders")
-	a.Multithread = parseBoolArg(args, Multithread, "running on multiple threads")
-	a.DateMajorDir = parseBoolArg(args, DateMajorDir, "using date-major directories")
-	a.UseEditDate = parseBoolArg(args, UseEditDate, "using date that demo was last edited")
-	a.TwelveHourTime = parseBoolArg(args, TwelveHourTime, "using twelve-hour time")
-	a.ShowConVars = parseBoolArg(args, ShowConVars, "showing console variables from demos")
+	a.Silent = parseBoolArg(args, Silent, a.Silent, "running silently")
+	a.SortYear = parseBoolArg(args, SortYear, a.SortYear, "sorting years")
+	a.SortMonth = parseBoolArg(args, SortMonth, a.SortMonth, "sorting months")
+	a.SortGameType = parseBoolArg(args, SortGameType, a.SortGameType, "sorting game types")
+	a.KeepPrefix = parseBoolArg(args, KeepPrefix, a.KeepPrefix, "keeping demo prefixes")
+	a.RenameMap = parseBoolArg(args, RenameMap, a.RenameMap, "renaming with map name")
+	a.RenameDuration = parseBoolArg(args, RenameDuration, a.RenameDuration, "renaming with demo duration")
+	a.SearchDirs = parseBoolArg(args, SearchDirs, a.SearchDirs, "searching folders")
+	a.Multithread = parseBoolArg(args, Multithread, a.Multithread, "running on multiple threads")
+	a.DateMajorDir = parseBoolArg(args, DateMajorDir, a.DateMajorDir, "using date-major directories")
+	a.UseEditDate = parseBoolArg(args, UseEditDate, a.UseEditDate, "using date that demo was last edited")
+	a.TwelveHourTime = parseBoolArg(args, TwelveHourTime, a.TwelveHourTime, "using twelve-hour time")
+	a.ShowConVars = parseBoolArg(args, ShowConVars, a.ShowConVars, "showing console variables from demos")
 
 	// Get int arg values
-	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan))
+	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan, a.ZipOlderThan))
 	if a.ZipOlderThan != 0 {
 		fmt.Printf("Zipping demos older than: %d years\n", a.ZipOlderThan)
 	} else {
 		fmt.Println("Not zipping old demos")
 	}
 
-	a.CullBelow = uint8(parseIntArg(args, CullBelow))
+	a.CullBelow = uint8(parseIntArg(args, CullBelow, a.CullBelow))
 	if a.CullBelow != 0 {
 		fmt.Printf("Culling demos shorter than: %d seconds\n", a.CullBelow)
 	} else {
@@ -201,6 +198,12 @@ func main() {
 	demoListCount := len(demoList)
 	fmt.Printf("Scanning %d demos...\n", demoListCount)
 
+	// Cull short demos prior to parsing information from demos
+	var culledDemos []Demo
+	if args.CullBelow > 0 {
+		culledDemos = demoio.CullShortDemos(&demoList, args.CullBelow)
+	}
+
 	// Do incrementing through demoList here
 	for i := range demoList {
 		// Get date and times from demo title
@@ -211,74 +214,83 @@ func main() {
 		// Get new names
 		if args.RenameMap || args.RenameDuration {
 			timeFormat := demoio.GetTimeFormat(args.TwelveHourTime)
-			demoio.GetNewName(demoList[i], timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
+			demoio.GetNewName(&demoList[i], timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
 		}
 	}
 
-	// TODO: This is currently not ideal
-	// Ideally, when we move demos we just check if a year has been seen before.
-	// If not, then we handle the file and remember that we've seen that year.
-	// If we are using DateMajorDir = false then we handle/remember on a per-gametype basis.
-	years := demoio.GroupYears(demoList)
+	// Sort and move demos
+	demoio.SortDemos(demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.SetAsideCulled)
 
-	for year, demos := range years {
-		// Asynchronously scan demos if there's a lot
-		var casualDemos []Demo
-		var mvmDemos []Demo
-		var tournamentDemos []Demo
-		demoCount := len(demos)
-		cores := (runtime.NumCPU() / 2) - 1 // Avoid e-cores and keep one core open
-		if cores > 1 && demoCount > cores*10 {
-			type GameTypes struct {
-				Casual     []Demo
-				Mvm        []Demo
-				Tournament []Demo
-			}
-
-			// Determine how to split demos list to distribute across cores
-			chunkLength := demoCount / cores
-			chunkStart := 0
-			chunkEnd := chunkLength
-			fmt.Printf("Utilizing %d cores...\n", cores)
-
-			// Scan demos and determine gamemode type
-			scanned := make([]GameTypes, cores)
-			var scanners sync.WaitGroup
-			for i := range cores - 1 {
-				cs := chunkStart
-				ce := chunkEnd
-				scanners.Go(func() {
-					c, m, t := demoio.GroupGameTypes(demos[cs:ce])
-					scanned[i] = GameTypes{c, m, t}
-				})
-				chunkStart += chunkLength
-				chunkEnd += chunkLength
-			}
-			scanners.Go(func() {
-				c, m, t := demoio.GroupGameTypes(demos[chunkStart:])
-				scanned[cores-1] = GameTypes{c, m, t}
-			})
-			scanners.Wait()
-
-			// Combine scanned gametype demos
-			for i := range scanned {
-				casualDemos = append(casualDemos, scanned[i].Casual...)
-				mvmDemos = append(mvmDemos, scanned[i].Mvm...)
-				tournamentDemos = append(tournamentDemos, scanned[i].Tournament...)
-			}
-		} else { // Scan using single core
-			casualDemos, mvmDemos, tournamentDemos = demoio.GroupGameTypes(demos)
-		}
-
-		// Move files to corresponding directories
-		dirPrefix := filepath.Join(strconv.Itoa(year)+"demos", "")
-		var movers sync.WaitGroup
-		// TODO Format wishDir = sprintf(majorDir/minorDir)
-		movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "casual"), casualDemos) })
-		movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "mvm"), mvmDemos) })
-		movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "tournament"), tournamentDemos) })
-		movers.Wait()
-	}
-
+	// Report that we're done
 	enterToExit(args.Silent)
+
+	/*
+		// TODO: This is currently not ideal
+		// Ideally, when we move demos we just check if a year has been seen before.
+		// If not, then we handle the file and remember that we've seen that year.
+		// If we are using DateMajorDir = false then we handle/remember on a per-gametype basis.
+		years := demoio.GroupYears(demoList)
+
+		// TODO Update this with new GetGameType and SortDemos
+		for year, demos := range years {
+			// Asynchronously scan demos if there's a lot
+			var casualDemos []Demo
+			var mvmDemos []Demo
+			var tournamentDemos []Demo
+			demoCount := len(demos)
+			cores := (runtime.NumCPU() / 2) - 1 // Avoid e-cores and keep one core open
+			if cores > 1 && demoCount > cores*10 {
+				type GameTypes struct {
+					Casual     []Demo
+					Mvm        []Demo
+					Tournament []Demo
+				}
+
+				// Determine how to split demos list to distribute across cores
+				chunkLength := demoCount / cores
+				chunkStart := 0
+				chunkEnd := chunkLength
+				fmt.Printf("Utilizing %d cores...\n", cores)
+
+				// Scan demos and determine gamemode type
+				scanned := make([]GameTypes, cores)
+				var scanners sync.WaitGroup
+				for i := range cores - 1 {
+					cs := chunkStart
+					ce := chunkEnd
+					scanners.Go(func() {
+						c, m, t := demoio.GroupGameTypes(demos[cs:ce])
+						scanned[i] = GameTypes{c, m, t}
+					})
+					chunkStart += chunkLength
+					chunkEnd += chunkLength
+				}
+				scanners.Go(func() {
+					c, m, t := demoio.GroupGameTypes(demos[chunkStart:])
+					scanned[cores-1] = GameTypes{c, m, t}
+				})
+				scanners.Wait()
+
+				// Combine scanned gametype demos
+				for i := range scanned {
+					casualDemos = append(casualDemos, scanned[i].Casual...)
+					mvmDemos = append(mvmDemos, scanned[i].Mvm...)
+					tournamentDemos = append(tournamentDemos, scanned[i].Tournament...)
+				}
+			} else { // Scan using single core
+				casualDemos, mvmDemos, tournamentDemos = demoio.GroupGameTypes(demos)
+			}
+
+			// Move files to corresponding directories
+			dirPrefix := filepath.Join(strconv.Itoa(year)+"demos", "")
+			var movers sync.WaitGroup
+			// TODO Format wishDir = sprintf(majorDir/minorDir)
+			movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "casual"), casualDemos) })
+			movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "mvm"), mvmDemos) })
+			movers.Go(func() { demoio.MoveToDirectory(filepath.Join(dirPrefix, "tournament"), tournamentDemos) })
+			movers.Wait()
+		}
+
+		enterToExit(args.Silent)
+	*/
 }
