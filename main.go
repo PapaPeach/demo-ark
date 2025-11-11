@@ -37,21 +37,25 @@ type Arguments struct {
 }
 
 /* Parses boolean arguments and returns the boolean value */
-func parseBoolArg(args []string, str string, message string) bool {
-	if i := slices.Index(args, str); i != -1 {
-		switch args[i+1] {
-		case "1":
-			fallthrough
-		case "true":
-			fmt.Print(message)
-			return true
-		case "0":
-			fallthrough
-		case "false":
-			return false
-		default:
-			log.Printf("Invalid argument value: %s = %s\n", args[i], args[i+1])
-			enterToExit(false)
+func parseBoolArg(args []string, keyword string, message string) bool {
+	for _, arg := range args {
+		// Locate keyword=...
+		if strings.HasPrefix(arg, keyword+"=") {
+			switch arg[len(keyword)+1:] {
+			case "1":
+				fallthrough
+			case "true":
+				fmt.Println(strings.ToUpper(message[:1]) + message[1:])
+				return true
+			case "0":
+				fallthrough
+			case "false":
+				fmt.Println("Not", message)
+				return false
+			default:
+				log.Printf("Invalid argument value: %s\n", arg)
+				enterToExit(false)
+			}
 		}
 	}
 
@@ -59,22 +63,24 @@ func parseBoolArg(args []string, str string, message string) bool {
 }
 
 /* Parses integer arguments and returns the integer value */
-func parseIntArg(args []string, str string, message string) uint8 {
-	if i := slices.Index(args, str); i != -1 {
-		value, err := strconv.Atoi(args[i+1])
-		if err != nil {
-			log.Printf("Invalid argument value: %s = %s\n", args[i], args[i+1])
-			enterToExit(false)
-		}
+func parseIntArg(args []string, keyword string) uint8 {
+	for _, arg := range args {
+		// Locate keyword=...
+		if strings.HasPrefix(arg, keyword+"=") {
+			value, err := strconv.Atoi(arg[len(keyword)+1:])
+			if err != nil {
+				log.Printf("Invalid argument value: %s\n", arg)
+				enterToExit(false)
+			}
 
-		// If value wouldn't fit
-		if value > 255 {
-			log.Printf("Invalid argument value: %s = %s\tMaximum value: 255\n", args[i], args[i+1])
-			enterToExit(false)
-		}
+			// If value wouldn't fit
+			if value > 255 {
+				log.Printf("Invalid argument value: %s\tMaximum value: 255\n", arg)
+				enterToExit(false)
+			}
 
-		fmt.Print(message)
-		return uint8(value)
+			return uint8(value)
+		}
 	}
 
 	return 0
@@ -122,37 +128,50 @@ func getArgs() Arguments {
 		UseEditDate:    false,
 		TwelveHourTime: false,
 		ShowConVars:    false,
+		SetAsideCulled: true,
 		ZipOlderThan:   1,
 		CullBelow:      10,
 		Snipe:          "",
 		IgnoreWords:    []string{"reference"},
 	}
 
-	// TODO: Redo argument system to just be "argument=value"
-	// TODO: make these say "[Description] set to [value]"
 	// Get bool arg values
-	a.Silent = parseBoolArg(args, Silent, "Running silently\n")
-	a.SortYear = parseBoolArg(args, SortYear, "Sorting years\n")
-	a.SortMonth = parseBoolArg(args, SortMonth, "Sorting months\n")
-	a.SortGameType = parseBoolArg(args, SortGameType, "Sorting game types\n")
-	a.KeepPrefix = parseBoolArg(args, KeepPrefix, "Keeping demo prefixes\n")
-	a.RenameMap = parseBoolArg(args, RenameMap, "Renaming with map name\n")
-	a.RenameDuration = parseBoolArg(args, RenameDuration, "Renaming with demo duration\n")
-	a.SearchDirs = parseBoolArg(args, SearchDirs, "Searching folders\n")
-	a.Multithread = parseBoolArg(args, Multithread, "Multithreading set\n")
-	a.DateMajorDir = parseBoolArg(args, DateMajorDir, "Date major directory set\n")
-	a.UseEditDate = parseBoolArg(args, UseEditDate, "Using date that demo was last edited\n")
-	a.TwelveHourTime = parseBoolArg(args, TwelveHourTime, "Using twelve-hour time\n")
-	a.ShowConVars = parseBoolArg(args, ShowConVars, "Showing console variables from demos\n")
+	a.Silent = parseBoolArg(args, Silent, "running silently")
+	a.SortYear = parseBoolArg(args, SortYear, "sorting years")
+	a.SortMonth = parseBoolArg(args, SortMonth, "sorting months")
+	a.SortGameType = parseBoolArg(args, SortGameType, "sorting game types")
+	a.KeepPrefix = parseBoolArg(args, KeepPrefix, "keeping demo prefixes")
+	a.RenameMap = parseBoolArg(args, RenameMap, "renaming with map name")
+	a.RenameDuration = parseBoolArg(args, RenameDuration, "renaming with demo duration")
+	a.SearchDirs = parseBoolArg(args, SearchDirs, "searching folders")
+	a.Multithread = parseBoolArg(args, Multithread, "running on multiple threads")
+	a.DateMajorDir = parseBoolArg(args, DateMajorDir, "using date-major directories")
+	a.UseEditDate = parseBoolArg(args, UseEditDate, "using date that demo was last edited")
+	a.TwelveHourTime = parseBoolArg(args, TwelveHourTime, "using twelve-hour time")
+	a.ShowConVars = parseBoolArg(args, ShowConVars, "showing console variables from demos")
 
 	// Get int arg values
-	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan, "Zipping old demos"))
-	a.CullBelow = uint8(parseIntArg(args, CullBelow, "Culling short demos"))
+	a.ZipOlderThan = uint8(parseIntArg(args, ZipOlderThan))
+	if a.ZipOlderThan != 0 {
+		fmt.Printf("Zipping demos older than: %d years\n", a.ZipOlderThan)
+	} else {
+		fmt.Println("Not zipping old demos")
+	}
+
+	a.CullBelow = uint8(parseIntArg(args, CullBelow))
+	if a.CullBelow != 0 {
+		fmt.Printf("Culling demos shorter than: %d seconds\n", a.CullBelow)
+	} else {
+		fmt.Println("Not culling short demos")
+	}
 
 	// Get snipe file
-	if i := slices.Index(args, Snipe); i != -1 {
-		a.Snipe = args[i+1]
-		fmt.Println("Sniping:", a.Snipe)
+	for _, arg := range args {
+		// Locate keyword=...
+		if strings.HasPrefix(arg, Snipe+"=") {
+			a.Snipe = arg[len(Snipe)+1:]
+			fmt.Println("Sniping file:", a.Snipe)
+		}
 	}
 
 	// Get ignore words
@@ -174,6 +193,7 @@ func enterToExit(silent bool) {
 }
 
 func main() {
+	// Get commandline arguments
 	args := getArgs()
 
 	// Get demos
