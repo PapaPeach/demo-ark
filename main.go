@@ -12,6 +12,8 @@ import (
 
 type Demo = demoio.Demo
 
+// TODO: Add CullGameType
+// TODO: Add ConfirmCull
 type Arguments struct {
 	Silent         bool     // Run program without prompts
 	SortYear       bool     // Group demos by year
@@ -20,7 +22,7 @@ type Arguments struct {
 	KeepPrefix     bool     // Rename options won't overwrite a detected ds_prefix
 	RenameMap      bool     // Rename the demo to contain the map name
 	RenameDuration bool     // Rename demo to contain the duration of the demo
-	SearchDirs     bool     // Search for subdirectories within the current directory
+	SearchDirs     bool     // Search subdirectories within the current directory
 	Multithread    bool     // Allow the use of multiple cores / threads
 	DateMajorDir   bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
 	UseEditDate    bool     // Use the date that a demo was last edited rather than date in its file name
