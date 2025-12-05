@@ -1,7 +1,6 @@
 package demoio
 
 import (
-	"demo-ark/demoark/pkg/parser"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	parser "github.com/papapeach/tf-demo-parser"
 )
 
 type Demo struct {
