@@ -25,15 +25,18 @@ type Demo struct {
 }
 
 /* Culls demos shorter than a specified minimum length */
-func CullShortDemos(demos *[]Demo, min uint8) []Demo {
+func CullShortDemos(demos *[]Demo, min uint16) []Demo {
 	var cull []Demo
 	keep := (*demos)[:0]
 	for _, demo := range *demos {
-		if demo.Duration < float32(min) { // If short than minimum, move it to cull list
+		if demo.Duration < float32(min) && demo.Duration > 0.0 { // If short than minimum, move it to cull list
 			cull = append(cull, demo)
 			fmt.Printf("Marked short demo for culling: %s\tduration: %.3f seconds\n", demo.Name, demo.Duration)
 		} else { // If longer than minimum, keep it in main demo list
 			keep = append(keep, demo)
+			if demo.Duration == 0.0 {
+				fmt.Printf("%s reported a duration of 0.0 seconds.\nThis indicates a TF2 bug occured while recording. Demo will will not be culled.\n", demo.Name)
+			}
 		}
 	}
 
@@ -98,7 +101,7 @@ func GetNewName(demo *Demo, dateTimeFormat string, keepPrefix bool, renameMap bo
 	// Add duration
 	if renameDuration {
 		length := int(demo.Duration)
-		wishName = fmt.Sprintf("%s_%d-%02d", wishName, length/60, length%60)
+		wishName = fmt.Sprintf("%s_%02d-%02d", wishName, length/60, length%60)
 	}
 
 	// Add .dem and set demo's new name
@@ -140,7 +143,7 @@ func GetGameType(demo *Demo) {
 }
 
 /* Returns a list of .dem files in the current directory */
-func GetDemos(ignoreWords []string) []Demo {
+func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 	// Get list of files in current directory
 	directory, err := os.Open(".")
 	if err != nil {
@@ -168,7 +171,7 @@ func GetDemos(ignoreWords []string) []Demo {
 			// Get header for map name and duration
 			f, err := os.Open(file.Name())
 			if err != nil {
-				fmt.Printf("Error opening %v: %v", file.Name(), err)
+				fmt.Printf("Error opening %v: %v\n", file.Name(), err)
 			}
 			header := parser.ReadHeader(f)
 
@@ -178,6 +181,28 @@ func GetDemos(ignoreWords []string) []Demo {
 		}
 	ignored:
 	}
+
+	return demos
+}
+
+func SnipeDemo(filename string) []Demo {
+	// Open demo and parse info
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Printf("Error opening %v: %v\n", filename, err)
+		os.Exit(1)
+	}
+	defer file.Close()
+
+	fileInfo, err := os.Stat(filename)
+	if err != nil {
+		fmt.Printf("Error opening %v: %v\n", filename, err)
+		os.Exit(1)
+	}
+
+	header := parser.ReadHeader(file)
+	demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, DateTime: fileInfo.ModTime(), Duration: header.PlaybackTime, GameType: 0}
+	demos := []Demo{demo}
 
 	return demos
 }
@@ -205,12 +230,12 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 
 	// Sort demos into year and/or gametype
 	if sortYear || sortGameType {
-		for _, demo := range demos {
+		for i := range demos {
 			// Get game type
 			gameType := ""
 			if sortGameType {
-				GetGameType(&demo)
-				switch demo.GameType {
+				GetGameType(&demos[i])
+				switch demos[i].GameType {
 				case 0:
 					gameType = "tournament"
 				case 1:
@@ -223,7 +248,7 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 			// Get year as a string
 			year := ""
 			if sortYear {
-				year = strconv.Itoa(demo.DateTime.Year())
+				year = strconv.Itoa(demos[i].DateTime.Year())
 			}
 
 			// Get name of directory to move demo to
@@ -242,7 +267,7 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 			}
 
 			// Move demo to directory and rename
-			err = os.Rename(demo.Name, filepath.Join(wishDir, demo.NewName))
+			err = os.Rename(demos[i].Name, filepath.Join(wishDir, demos[i].NewName))
 			if err != nil {
 				log.Println(err)
 			}

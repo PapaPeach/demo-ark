@@ -24,6 +24,6 @@ For example:
 | SetAsideCulled |   true (1) / false (0)   |     true      | Set aside culled demos to a "culled" directory, rather than deleting them    |
 | ShowConVars    |   true (1) / false (0)   |     false     | Outputs console variables parsed from demo (mainly for debugging)            |
 | ZipOlderThan   |    0 (disabled) - 255    |       1       | Zip demos older than this many years                                         |
-| CullBelow      |    0 (disabled) - 255    |      10       | Number of seconds that demos below that duration will be deleted             |
+| CullBelow      |    0 (disabled) - 300    |      30       | Number of seconds that demos below that duration will be deleted             |
 | Snipe          | Any continuous filename  |      ""       | Snipe a specific file (exactly) to execute program on (mainly for debugging) |
 | IgnoreWords    | Any words after key word |  "reference"  | Ignore file / folder names containing string                                 |
