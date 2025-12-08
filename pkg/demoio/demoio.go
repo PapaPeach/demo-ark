@@ -1,6 +1,7 @@
 package demoio
 
 import (
+	"archive/zip"
 	"errors"
 	"fmt"
 	"io"
@@ -22,6 +23,73 @@ type Demo struct {
 	DateTime time.Time // Date and time demo was recorded / edited
 	Duration float32   // Duration of demo in seconds
 	GameType uint8     // 0: Tournament | 1: Casual | 2: MvM
+}
+
+/* Zips a folder of demos from */
+func ZipDir(dirName string) {
+	fmt.Printf("Zipping %s...\n", dirName)
+
+	// Check if dirName.zip already exists
+	hasConflict := false
+	oldZip := dirName + "_old.zip"
+	_, err := os.Stat(dirName + ".zip")
+	if err == nil {
+		fmt.Printf("Detected existing %s.zip, consolidating contents...\n", dirName)
+		os.Rename(dirName+".zip", oldZip)
+		hasConflict = true
+	}
+
+	// Create zip file
+	zipFile, err := os.Create(dirName + ".zip")
+	if err != nil {
+		log.Println("Error creating zip file:", err)
+		os.Exit(1)
+	}
+	defer zipFile.Close()
+
+	// Create zip writer
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	// Copy contents of pre-existing zip to current zip
+	if hasConflict {
+		// Open existing zip archive for reading
+		zipReader, err := zip.OpenReader(oldZip)
+		if err != nil {
+			log.Println("Error opening existing zip:", err)
+			os.Exit(1)
+		}
+
+		// Copy contents from existing archive to new archive
+		for _, file := range zipReader.File {
+			err = zipWriter.Copy(file)
+			if err != nil {
+				log.Println("Error copying existing zip:", err)
+				os.Exit(1)
+			}
+		}
+		zipReader.Close()
+
+		// Remove old zip
+		err = os.Remove(oldZip)
+		if err != nil {
+			log.Println("Error removing existing zip:", err)
+		}
+	}
+
+	// Zip contents of directory
+	dir := os.DirFS(dirName)
+	err = zipWriter.AddFS(dir)
+	if err != nil {
+		log.Println("Error zipping directory:", err)
+		os.Exit(1)
+	}
+
+	// Removed source directory
+	err = os.RemoveAll(dirName)
+	if err != nil {
+		log.Println("Error removing directory after zipping:", err)
+	}
 }
 
 /* Culls demos shorter than a specified minimum length */

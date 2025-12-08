@@ -238,6 +238,9 @@ func main() {
 	// Sort and move demos
 	demoio.SortDemos(demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.SetAsideCulled, args.ShowConVars)
 
+	// TODO: Testing zip functionality
+	//demoio.ZipDir("demos_2025")
+
 	// Report that we're done
 	enterToExit(args.Silent)
 }
