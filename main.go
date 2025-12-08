@@ -96,7 +96,7 @@ func getArgs() Arguments {
 	const SetAsideCulled = "setasideculled" //
 	const TwoStageCull = "twostagecull"     // TODO
 	const ShowConVars = "showconvars"       //
-	const ZipOlderThan = "zipolderthan"     // TODO
+	const ZipOlderThan = "zipolderthan"     //
 	const CullBelow = "cullbelow"           //
 	const Snipe = "snipe"                   //
 	const IgnoreWords = "ignorewords"       //
@@ -238,8 +238,10 @@ func main() {
 	// Sort and move demos
 	demoio.SortDemos(demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.SetAsideCulled, args.ShowConVars)
 
-	// TODO: Testing zip functionality
-	//demoio.ZipDir("demos_2025")
+	// Zip folders older than specified number of years
+	if args.ZipOlderThan > 0 {
+		demoio.ZipOldDemos(args.ZipOlderThan)
+	}
 
 	// Report that we're done
 	enterToExit(args.Silent)

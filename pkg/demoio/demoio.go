@@ -92,6 +92,78 @@ func ZipDir(dirName string) {
 	}
 }
 
+func ZipOldDemos(zipOlderThan uint8) {
+	// Read contents of current directory for "demos_..."
+	directory, err := os.Open(".")
+	if err != nil {
+		log.Println("Error opening current directory for date gathering:", err)
+		os.Exit(1)
+	}
+	defer directory.Close()
+
+	contents, err := directory.Readdirnames(0)
+	if err != nil {
+		log.Println("Error reading contents of current directory for date gathering:", err)
+		os.Exit(1)
+	}
+
+	// Check if file is older than threshhold
+	year := time.Now().Year()
+	for _, filename := range contents {
+		// DataMajorDir=true file structure (demos_2YYY/gametype/blah.dem)
+		if len(filename) == 10 && strings.HasPrefix(filename, "demos_2") {
+			// Parse file's year
+			ignored := ""
+			fileYear := 0
+			_, err := fmt.Sscanf(filename, "%6s%d", &ignored, &fileYear)
+			if err != nil {
+				log.Println("Error parsing year from filename:", err)
+				continue
+			}
+
+			// Check if we should zip
+			if year-fileYear >= int(zipOlderThan) {
+				ZipDir(filename)
+			}
+		} else if filename == "demos_tournament" || filename == "demos_casual" || filename == "demos_mvm" {
+			// DateMajorDir=false file structure (demos_gametype/YYYY/blah.dem)
+			// Open gametype directory
+			gameTypeDir, err := os.Open(filename)
+			if err != nil {
+				log.Println("Error opening gametype directory:", err)
+				continue
+			}
+
+			gameTypeContents, err := gameTypeDir.Readdirnames(0)
+			if err != nil {
+				log.Println("Error reading contents of gametype directory:", err)
+				continue
+			}
+			gameTypeDir.Close()
+
+			// Check if we should zip inner files
+			for _, innerFilename := range gameTypeContents {
+				// Skip impossible years
+				if len(innerFilename) != 4 {
+					continue
+				}
+
+				// Parse years from file names
+				fileYear, err := strconv.Atoi(innerFilename)
+				if err != nil {
+					log.Println("Error parsing year from inner filename:", err)
+					continue
+				}
+
+				// Check if we should zip
+				if year-fileYear >= int(zipOlderThan) {
+					ZipDir(filename + string(filepath.Separator) + innerFilename)
+				}
+			}
+		}
+	}
+}
+
 /* Culls demos shorter than a specified minimum length */
 func CullShortDemos(demos *[]Demo, min uint16) []Demo {
 	var cull []Demo
