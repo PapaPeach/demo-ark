@@ -82,22 +82,22 @@ func parseIntArg(args []string, keyword string, def uint16) uint16 {
 /* Gets argument values */
 func getArgs() Arguments {
 	const Silent = "silent"                 //
-	const SortYear = "sortyear"             // TODO
-	const SortMonth = "sortmonth"           // TODO
-	const SortGameType = "sortgametype"     // TODO
+	const SortYear = "sortyear"             //
+	const SortMonth = "sortmonth"           // TODO Should this be kept?
+	const SortGameType = "sortgametype"     //
 	const KeepPrefix = "keepprefix"         //
 	const RenameMap = "renamemap"           //
 	const RenameDuration = "renameduration" //
 	const SearchDirs = "searchdirs"         // TODO
 	const Multithread = "multithread"       // TODO: Partial
-	const DateMajorDir = "datemajordir"     // TODO
+	const DateMajorDir = "datemajordir"     //
 	const UseEditDate = "useeditdate"       //
-	const TwelveHourTime = "twelvehourtime" //
-	const SetAsideCulled = "setasideculled" // TODO
+	const TwelveHourTime = "twelvehourtime" // Should this be kept?
+	const SetAsideCulled = "setasideculled" //
 	const TwoStageCull = "twostagecull"     // TODO
-	const ShowConVars = "showconvars"       // TODO
+	const ShowConVars = "showconvars"       //
 	const ZipOlderThan = "zipolderthan"     // TODO
-	const CullBelow = "cullbelow"           // TODO
+	const CullBelow = "cullbelow"           //
 	const Snipe = "snipe"                   //
 	const IgnoreWords = "ignorewords"       //
 
@@ -236,7 +236,7 @@ func main() {
 	}
 
 	// Sort and move demos
-	demoio.SortDemos(demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.SetAsideCulled)
+	demoio.SortDemos(demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.SetAsideCulled, args.ShowConVars)
 
 	// Report that we're done
 	enterToExit(args.Silent)

@@ -109,7 +109,7 @@ func GetNewName(demo *Demo, dateTimeFormat string, keepPrefix bool, renameMap bo
 }
 
 /* Get game type of demo (0: Tournament | 1: Casual | 2: MvM) */
-func GetGameType(demo *Demo) {
+func GetGameType(demo *Demo, showConVars bool) {
 	// Determine if MvM via map prefix in header
 	if strings.HasPrefix(demo.Map, "mvm_") {
 		demo.GameType = 2
@@ -125,6 +125,15 @@ func GetGameType(demo *Demo) {
 	defer file.Close()
 	file.Seek(1072, io.SeekStart) // Skip header of known length
 	msg := parser.ReadMessage(file)
+
+	// Prints parsed ConVars for ShowConVars=true
+	if showConVars {
+		fmt.Println("Showing console variables for:", demo.Name)
+		for _, sc := range msg.ParsedData.SetConVar {
+			parser.PrintSetConVar(sc)
+		}
+		fmt.Println()
+	}
 
 	// Determine if casual via specific conVar values
 	for _, sc := range msg.ParsedData.SetConVar {
@@ -217,7 +226,7 @@ func CheckConVar(conVars []string, wishStr string, wishVal string) bool {
 
 // TODO: Update _events.json
 /* Moves files in a list of files to a directory */
-func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, setAsideCulled bool) {
+func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, setAsideCulled bool, showConVars bool) {
 	// Handle length accordingly
 	switch length := len(demos); length {
 	case 0: // Skip to culling if no demos to sort
@@ -231,10 +240,10 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 	// Sort demos into year and/or gametype
 	if sortYear || sortGameType {
 		for i := range demos {
-			// Get game type
+			// Get game type for SortGameType=true
 			gameType := ""
 			if sortGameType {
-				GetGameType(&demos[i])
+				GetGameType(&demos[i], showConVars)
 				switch demos[i].GameType {
 				case 0:
 					gameType = "tournament"
@@ -245,7 +254,7 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 				}
 			}
 
-			// Get year as a string
+			// Get year as a string for SortYear=true
 			year := ""
 			if sortYear {
 				year = strconv.Itoa(demos[i].DateTime.Year())
@@ -253,9 +262,9 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 
 			// Get name of directory to move demo to
 			wishDir := "demos_"
-			if dateMajorDir {
+			if dateMajorDir { // demos_2025/tournament/demo.dem
 				wishDir += filepath.Join(year, gameType)
-			} else {
+			} else { // demos_tournament/2025/demo.dem
 				wishDir += filepath.Join(gameType, year)
 			}
 
@@ -309,92 +318,6 @@ cull:
 
 		// Move demo to culled directory
 		err := os.Rename(demo.Name, filepath.Join(culledDir, demo.NewName))
-		if err != nil {
-			log.Println(err)
-		}
-	}
-}
-
-/* Group demos by gametype */
-func GroupGameTypes(demos []Demo) ([]Demo, []Demo, []Demo) {
-	var casualDemos []Demo
-	var mvmDemos []Demo
-	var tournamentDemos []Demo
-	for i := range demos {
-		// Open file for reading
-		filename := demos[i].Name
-
-		// Determine if MvM via map prefix in header
-		if strings.HasPrefix(demos[i].Map, "mvm_") {
-			mvmDemos = append(mvmDemos, demos[i])
-			continue
-		}
-
-		// Get message contents
-		file, err := os.Open(filename)
-		if err != nil {
-			fmt.Printf("Error opening %v: %v", filename, err)
-		}
-		file.Seek(1072, io.SeekStart)
-		msg := parser.ReadMessage(file)
-
-		// Determine if casual via specific conVar values
-		casual := false
-		for _, sc := range msg.ParsedData.SetConVar {
-			// Check if tournament 1, stopwatch 0, readymode 1, readymode_min 0
-			if CheckConVar(sc.ConVars, "mp_tournament", "1") &&
-				CheckConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
-				CheckConVar(sc.ConVars, "mp_tournament_readymode", "1") &&
-				CheckConVar(sc.ConVars, "mp_tournament_readymode_min", "0") {
-				casual = true
-				file.Close()
-				break
-			}
-		}
-		if casual {
-			casualDemos = append(casualDemos, demos[i])
-		} else {
-			tournamentDemos = append(tournamentDemos, demos[i])
-		}
-		file.Close()
-	}
-	return casualDemos, mvmDemos, tournamentDemos
-}
-
-/* Groups demos by year */
-func GroupYears(demos []Demo) map[int][]Demo {
-	years := make(map[int][]Demo)
-	for _, demo := range demos {
-		years[demo.DateTime.Year()] = append(years[demo.DateTime.Year()], demo)
-	}
-
-	return years
-}
-
-// TODO: Update _events.json
-/* Moves files in a list of files to a directory */
-func MoveToDirectory(wishDir string, demos []Demo) {
-	// Handle length accordingly
-	length := len(demos)
-	switch length {
-	case 0: // Skip if no files to move exist
-		return
-	case 1: // Singular demo file
-		fmt.Printf("Moving %d demo to %s...\n", length, wishDir)
-	default: // Plural demos
-		fmt.Printf("Moving %d demos to %s...\n", length, wishDir)
-	}
-
-	// Make directory to move to
-	err := os.MkdirAll(wishDir, os.ModePerm)
-	if err != nil && !errors.Is(err, os.ErrExist) {
-		log.Println(err)
-		os.Exit(1)
-	}
-
-	// Move files to directory
-	for _, demo := range demos {
-		err := os.Rename(demo.Name, filepath.Join(wishDir, demo.NewName))
 		if err != nil {
 			log.Println(err)
 		}
