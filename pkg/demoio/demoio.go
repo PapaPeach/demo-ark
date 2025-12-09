@@ -1,7 +1,6 @@
 package demoio
 
 import (
-	"archive/zip"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	zip "github.com/klauspost/compress/zip"
 	parser "github.com/papapeach/tf-demo-parser"
 )
 

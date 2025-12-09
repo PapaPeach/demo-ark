@@ -200,6 +200,16 @@ func enterToExit(silent bool) {
 }
 
 func main() {
+	// TODO: Profiling
+	/*c, err := os.Create("cpu.prof")
+	if err != nil {
+		log.Fatal("could not create CPU profile: ", err)
+	}
+	defer c.Close() // error handling omitted for example
+	if err := pprof.StartCPUProfile(c); err != nil {
+		log.Fatal("could not start CPU profile: ", err)
+	}*/
+
 	// Get commandline arguments
 	args := getArgs()
 
@@ -242,6 +252,21 @@ func main() {
 	if args.ZipOlderThan > 0 {
 		demoio.ZipOldDemos(args.ZipOlderThan)
 	}
+
+	// TODO: Profiling
+	/*pprof.StopCPUProfile()
+	m, err := os.Create("mem.prof")
+	if err != nil {
+		log.Fatal("could not create memory profile: ", err)
+	}
+	defer m.Close() // error handling omitted for example
+	runtime.GC()    // get up-to-date statistics
+	// Lookup("allocs") creates a profile similar to go test -memprofile.
+	// Alternatively, use Lookup("heap") for a profile
+	// that has inuse_space as the default index.
+	if err := pprof.Lookup("allocs").WriteTo(m, 0); err != nil {
+		log.Fatal("could not write memory profile: ", err)
+	}*/
 
 	// Report that we're done
 	enterToExit(args.Silent)
