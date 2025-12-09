@@ -16,7 +16,6 @@ type Demo = demoio.Demo
 type Arguments struct {
 	Silent         bool     // Run program without prompts
 	SortYear       bool     // Group demos by year
-	SortMonth      bool     // Group demos by month
 	SortGameType   bool     // Group demos by game type
 	KeepPrefix     bool     // Rename options won't overwrite a detected ds_prefix
 	RenameMap      bool     // Rename the demo to contain the map name
@@ -25,7 +24,6 @@ type Arguments struct {
 	Multithread    bool     // Allow the use of multiple cores / threads
 	DateMajorDir   bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
 	UseEditDate    bool     // Use the date that a demo was last edited rather than date in its file name
-	TwelveHourTime bool     // True: 12hr | false: 24hr
 	SetAsideCulled bool     // Set aside culled demos to a "culled" directory, rather than deleting them
 	TwoStageCull   bool     // Will first set aside culled demos, then on a subsequent run delete previously set aside demos
 	ShowConVars    bool     // Outputs console variables parsed from demo (mainly for debugging)
@@ -83,7 +81,6 @@ func parseIntArg(args []string, keyword string, def uint16) uint16 {
 func getArgs() Arguments {
 	const Silent = "silent"                 //
 	const SortYear = "sortyear"             //
-	const SortMonth = "sortmonth"           // TODO Should this be kept?
 	const SortGameType = "sortgametype"     //
 	const KeepPrefix = "keepprefix"         //
 	const RenameMap = "renamemap"           //
@@ -92,7 +89,6 @@ func getArgs() Arguments {
 	const Multithread = "multithread"       // TODO: Partial
 	const DateMajorDir = "datemajordir"     //
 	const UseEditDate = "useeditdate"       //
-	const TwelveHourTime = "twelvehourtime" // Should this be kept?
 	const SetAsideCulled = "setasideculled" //
 	const TwoStageCull = "twostagecull"     // TODO
 	const ShowConVars = "showconvars"       //
@@ -111,7 +107,6 @@ func getArgs() Arguments {
 	a := Arguments{
 		Silent:         false,
 		SortYear:       true,
-		SortMonth:      false,
 		SortGameType:   true,
 		KeepPrefix:     true,
 		RenameMap:      false,
@@ -120,7 +115,6 @@ func getArgs() Arguments {
 		Multithread:    true,
 		DateMajorDir:   true,
 		UseEditDate:    false,
-		TwelveHourTime: false,
 		SetAsideCulled: true,
 		TwoStageCull:   false,
 		ShowConVars:    false,
@@ -133,7 +127,6 @@ func getArgs() Arguments {
 	// Get bool arg values
 	a.Silent = parseBoolArg(args, Silent, a.Silent, "running silently")
 	a.SortYear = parseBoolArg(args, SortYear, a.SortYear, "sorting years")
-	a.SortMonth = parseBoolArg(args, SortMonth, a.SortMonth, "sorting months")
 	a.SortGameType = parseBoolArg(args, SortGameType, a.SortGameType, "sorting game types")
 	a.KeepPrefix = parseBoolArg(args, KeepPrefix, a.KeepPrefix, "keeping demo prefixes")
 	a.RenameMap = parseBoolArg(args, RenameMap, a.RenameMap, "renaming with map name")
@@ -142,7 +135,6 @@ func getArgs() Arguments {
 	a.Multithread = parseBoolArg(args, Multithread, a.Multithread, "running on multiple threads")
 	a.DateMajorDir = parseBoolArg(args, DateMajorDir, a.DateMajorDir, "using date-major directories")
 	a.UseEditDate = parseBoolArg(args, UseEditDate, a.UseEditDate, "using date that demo was last edited")
-	a.TwelveHourTime = parseBoolArg(args, TwelveHourTime, a.TwelveHourTime, "using twelve-hour time")
 	a.SetAsideCulled = parseBoolArg(args, SetAsideCulled, a.SetAsideCulled, "setting aside culled demos")
 	a.TwoStageCull = parseBoolArg(args, TwoStageCull, a.TwoStageCull, "Using two stage culling")
 
@@ -240,7 +232,7 @@ func main() {
 
 		// Get new names
 		if args.RenameMap || args.RenameDuration {
-			timeFormat := demoio.GetTimeFormat(args.TwelveHourTime)
+			timeFormat := "15-04-05"
 			demoio.GetNewName(&demoList[i], timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
 		}
 	}
