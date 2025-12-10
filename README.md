@@ -23,7 +23,6 @@ For example:
 | SearchDirs     |   true (1) / false (0)   |     false     | Search subdirectories within the current directory                                                                                           |
 | Multithread    |   true (1) / false (0)   |     true      | Allow the use of multiple cores / threads                                                                                                    |
 | DateMajorDir   |   true (1) / false (0)   |     true      | **True:** year/month/gametype/demo.dem<br>**False:** gametype/year/month/demo.dem                                                            |
-| UseEditDate    |   true (1) / false (0)   |     false     | Use the date that a demo was last edited rather than date in its file name                                                                   |
 | SetAsideCulled |   true (1) / false (0)   |     true      | Set aside culled demos to a "culled" directory, rather than deleting them                                                                    |
 | TwoStageCull   |   true (1) / false (0)   |     false     | Will first set aside culled demos, then on a subsequent run delete previously set aside demos                                                |
 | CullGameTypes  |         t, c, m          |      ""       | Cull demos of a specific game types (won't allow culling of all game types)<br> Example: `cullgametypes=cm` Will cull **C**asual and **M**vM |
@@ -36,12 +35,13 @@ For example:
 # Potential Options
 I tried to keep the options limited to things most people would find useful to keep customization approachable and maintainable. Unfortunately, I can't please everyone, but I think the program covers an overwhelming majority of use cases.  
 I can't add one-off customization options for individuals, if I recieve enough feedback for features via the appropriate channels (such as my [HUD / Project Discord](https://discord.gg/HyZRVtp)) I will do my best to add them.
-| Key Word       |                          Status                           | Description                                                                        |
-|----------------|:---------------------------------------------------------:|------------------------------------------------------------------------------------|
-| CreateShortcut |                          Planned                          | Create a shortcut to launch DemoArk with the current options, minus CreateShortcut |
-| LaunchTF2      |                          Planned                          | Launch TF2 after running DemoArk                                                   |
-| SortMonth      |  Removed, too niche<br>(may return with adequate demand)  | Group demos into folders by month                                                  |
-| TwelveHourTime | Removed, too finicky<br>(may return with adequate demand) | **True:** 12hr<br>**False:** 24hr                                                  |
+| Key Word       |        Status        | Description                                                                        |
+|----------------|:--------------------:|------------------------------------------------------------------------------------|
+| CreateShortcut |       Planned        | Create a shortcut to launch DemoArk with the current options, minus CreateShortcut |
+| LaunchTF2      |       Planned        | Launch TF2 after running DemoArk                                                   |
+| SortMonth      |  Removed, too niche  | Group demos into folders by month                                                  |
+| UseEditDate    |  Removed, too niche  | Use the date that a demo was last edited rather than date in its file name         |
+| TwelveHourTime | Removed, too finicky | **True:** 12hr<br>**False:** 24hr                                                  |
 
 # Is This A Virus?
 ### Nope.

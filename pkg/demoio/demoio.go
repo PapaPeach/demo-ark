@@ -510,7 +510,10 @@ cull:
 	for _, demo := range culled {
 		// Delete culled demos
 		if !setAsideCulled {
-			os.Remove(demo.Name)
+			err := os.Remove(demo.Name)
+			if err != nil {
+				log.Println("Error deleting culled demo:", err)
+			}
 			continue
 		}
 
