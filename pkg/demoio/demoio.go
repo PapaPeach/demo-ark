@@ -22,7 +22,7 @@ type Demo struct {
 	Map      string    // Map demo was recorded on
 	DateTime time.Time // Date and time demo was recorded / edited
 	Duration float32   // Duration of demo in seconds
-	GameType uint8     // 0: Tournament | 1: Casual | 2: MvM
+	GameType int8      // 0: Tournament | 1: Casual | 2: MvM
 }
 
 /* Zips a folder of demos from */
@@ -171,12 +171,61 @@ func CullShortDemos(demos *[]Demo, min uint16) []Demo {
 	for _, demo := range *demos {
 		if demo.Duration < float32(min) && demo.Duration > 0.0 { // If short than minimum, move it to cull list
 			cull = append(cull, demo)
-			fmt.Printf("Marked short demo for culling: %s\tduration: %.3f seconds\n", demo.Name, demo.Duration)
+			fmt.Printf("Marked short demo for culling: %s\tDuration: %.2f seconds\n", demo.Name, demo.Duration)
 		} else { // If longer than minimum, keep it in main demo list
 			keep = append(keep, demo)
 			if demo.Duration == 0.0 {
-				fmt.Printf("%s reported a duration of 0.0 seconds.\nThis indicates a TF2 bug occured while recording. Demo will will not be culled.\n", demo.Name)
+				fmt.Printf("%s reported a duration of 0.00 seconds.\nThis indicates a TF2 bug occured while recording. Demo will will not be culled.\n", demo.Name)
 			}
+		}
+	}
+
+	// Update demos list
+	*demos = keep
+	return cull
+}
+
+/* Culls demos of a specified game type based on a key string */
+func CullGameTypes(demos *[]Demo, key string) []Demo {
+	// Parse key
+	cullTournament := false
+	cullCasual := false
+	cullMvm := false
+	parsed := 0
+	if strings.ContainsRune(key, 't') {
+		cullTournament = true
+		parsed++
+	}
+	if strings.ContainsRune(key, 'c') {
+		cullCasual = true
+		parsed++
+	}
+	if strings.ContainsRune(key, 'm') {
+		cullMvm = true
+		parsed++
+	}
+
+	// Ensure key only contains usable characters
+	if parsed != len(key) {
+		log.Printf("Invalid CullGameType key. Usage: CullGameType=tcm (t = Tournament, c = Casual, m = MvM).\n")
+		os.Exit(1)
+	}
+
+	// Mark demos of gametype for culling
+	var cull []Demo
+	keep := (*demos)[:0]
+	for _, demo := range *demos {
+		if cullTournament && demo.GameType == 0 { // Cull Tournament
+			cull = append(cull, demo)
+			fmt.Printf("Marked demo for culling: %s\tGame Type: Tournament\n", demo.Name)
+		} else if cullCasual && demo.GameType == 1 { // Cull Casual
+			cull = append(cull, demo)
+			fmt.Printf("Marked demo for culling: %s\tGame Type: Casual\n", demo.Name)
+		} else if cullMvm && demo.GameType == 2 { // Cull MvM
+			cull = append(cull, demo)
+			fmt.Printf("Marked demo for culling: %s\tGame Type: MvM\n", demo.Name)
+		} else { // Don't mark for culling
+			keep = append(keep, demo)
 		}
 	}
 
@@ -350,7 +399,7 @@ func SnipeDemo(filename string) []Demo {
 	}
 
 	header := parser.ReadHeader(file)
-	demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, DateTime: fileInfo.ModTime(), Duration: header.PlaybackTime, GameType: 0}
+	demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, DateTime: fileInfo.ModTime(), Duration: header.PlaybackTime, GameType: -1}
 	demos := []Demo{demo}
 
 	return demos
@@ -379,11 +428,20 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 
 	// Sort demos into year and/or gametype
 	if sortYear || sortGameType {
+		// Check if we have already gotten game types
+		hasGameTypes := false
+		if demos[0].GameType != -1 {
+			hasGameTypes = true
+		}
+
 		for i := range demos {
 			// Get game type for SortGameType=true
 			gameType := ""
 			if sortGameType {
-				GetGameType(&demos[i], showConVars)
+				// Only run GetGameType if we don't already have it
+				if !hasGameTypes {
+					GetGameType(&demos[i], showConVars)
+				}
 				switch demos[i].GameType {
 				case 0:
 					gameType = "tournament"

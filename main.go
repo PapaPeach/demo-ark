@@ -29,6 +29,7 @@ type Arguments struct {
 	ShowConVars    bool     // Outputs console variables parsed from demo (mainly for debugging)
 	ZipOlderThan   uint8    // Zip demos older than this many years
 	CullBelow      uint16   // Number of seconds that demos below that duration will be deleted
+	CullGameTypes  string   // Cull specified gametypes (t = Tournament, c = Casual, m = MvM)
 	Snipe          string   // Snipe a specific file (exactly) to execute program on (mainly for debugging)
 	IgnoreWords    []string // Ignore file / folder names containing string
 }
@@ -94,6 +95,7 @@ func getArgs() Arguments {
 	const ShowConVars = "showconvars"       //
 	const ZipOlderThan = "zipolderthan"     //
 	const CullBelow = "cullbelow"           //
+	const CullGameTypes = "cullgametypes"   //
 	const Snipe = "snipe"                   //
 	const IgnoreWords = "ignorewords"       //
 
@@ -120,6 +122,7 @@ func getArgs() Arguments {
 		ShowConVars:    false,
 		ZipOlderThan:   1,
 		CullBelow:      30,
+		CullGameTypes:  "",
 		Snipe:          "",
 		IgnoreWords:    []string{"reference"},
 	}
@@ -138,7 +141,7 @@ func getArgs() Arguments {
 	a.SetAsideCulled = parseBoolArg(args, SetAsideCulled, a.SetAsideCulled, "setting aside culled demos")
 	a.TwoStageCull = parseBoolArg(args, TwoStageCull, a.TwoStageCull, "Using two stage culling")
 
-	// Get int arg values
+	// Get CullBelow int
 	a.CullBelow = uint16(parseIntArg(args, CullBelow, a.CullBelow))
 	if a.CullBelow != 0 {
 		// Don't allow culling more than 5 minute demos
@@ -152,6 +155,32 @@ func getArgs() Arguments {
 		fmt.Println("Not culling short demos")
 	}
 
+	// Get CullGameTypes string
+	for _, arg := range args {
+		// Locate keyword=...
+		if strings.HasPrefix(arg, CullGameTypes+"=") {
+			gameTypes := arg[len(CullGameTypes)+1:]
+			// Validate value length
+			if len(gameTypes) > 2 {
+				log.Printf("Invalid CullGameType value: %s. Will not allow culling of all demos.\nUsage: CullGameType=cm (t = Tournament, c = Casual, m = MvM).\n", gameTypes)
+				enterToExit(false)
+			} else if len(gameTypes) == 0 {
+				log.Printf("Invalid CullGameType value. Need game type key.\nUsage: CullGameType=cm (t = Tournament, c = Casual, m = MvM).\n")
+				enterToExit(false)
+			}
+			// Validate value contents
+			if !(strings.ContainsRune(gameTypes, 't') || strings.ContainsRune(gameTypes, 'c') || strings.ContainsRune(gameTypes, 'm')) {
+				log.Printf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (t = Tournament, c = Casual, m = MvM).\n", gameTypes)
+				enterToExit(false)
+			}
+
+			a.CullGameTypes = gameTypes
+			fmt.Println("Culling GameTypes:", a.CullGameTypes)
+			break
+		}
+	}
+
+	// Get ZipOlderThan int
 	tempZipOlderThan := parseIntArg(args, ZipOlderThan, uint16(a.ZipOlderThan))
 	if tempZipOlderThan <= 255 {
 		a.ZipOlderThan = uint8(tempZipOlderThan)
@@ -176,6 +205,7 @@ func getArgs() Arguments {
 		if strings.HasPrefix(arg, Snipe+"=") {
 			a.Snipe = arg[len(Snipe)+1:]
 			fmt.Println("Sniping file:", a.Snipe)
+			break
 		}
 	}
 
@@ -217,13 +247,13 @@ func main() {
 		fmt.Printf("Scanning %d demos...\n", demoListCount)
 	}
 
-	// Cull short demos prior to parsing information from demos
+	// Cull short demos prior to parsing more intensive information from demos
 	var culledDemos []Demo
 	if args.CullBelow > 0 {
 		culledDemos = demoio.CullShortDemos(&demoList, args.CullBelow)
 	}
 
-	// Do incrementing through demoList here
+	// Do incrementing through demoList here (Probably slightly slower but cleaner)
 	for i := range demoList {
 		// Get date and times from demo title
 		if !args.UseEditDate {
@@ -235,6 +265,16 @@ func main() {
 			timeFormat := "15-04-05"
 			demoio.GetNewName(&demoList[i], timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
 		}
+
+		// Get game types if needed
+		if args.SortGameType && args.CullGameTypes != "" {
+			demoio.GetGameType(&demoList[i], args.ShowConVars)
+		}
+	}
+
+	// Mark demos of specified gametypes for culling
+	if args.CullGameTypes != "" {
+		culledDemos = append(culledDemos, demoio.CullGameTypes(&demoList, args.CullGameTypes)...)
 	}
 
 	// Sort and move demos
