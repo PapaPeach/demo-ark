@@ -143,65 +143,63 @@ func parseIntPrompt(prompt string, max int) uint16 {
 
 /* Prompts user for options not set by command line arguments */
 func promptArgs(a *Arguments, cmdArgs map[string]bool) {
-	// TODO: Sort this and add a "default" escape code
+	// Explain prompts
+	defer fmt.Println()
+	fmt.Println("Some options were not set by the program launch arguments. There may be up to 16 options to set.")
+	for {
+		fmt.Print("Would you like to skip setting options and run with remaining options set to defaults?\nPress [Enter] to view remaining options or type \"skip\" to skip: ")
+		input := ""
+		_, err := fmt.Scanln(&input)
+		if err != nil {
+			// View remaining options
+			if strings.HasSuffix(err.Error(), "newline") {
+				break
+			}
+			// Genuine error
+			log.Println("Error getting input from user", err)
+			continue
+		}
+
+		if strings.EqualFold(input, "skip") {
+			fmt.Println("Using default options")
+			return
+		}
+	}
+	fmt.Println("Prompting for remaining options, some prompts may be skipped based on previous answers.")
+
 	// Ignore Silent, it can only be set by command line argument
-	// Prompt for values not given by command line arguments
+	// Sort options
 	if !cmdArgs[SortYear] {
-		a.SortYear = parseBoolPrompt("Would you like to sort demos into folders by year?", "sorting years")
+		fmt.Println()
+		a.SortYear = parseBoolPrompt("(1 / 16) Would you like to sort demos into folders by year?", "sorting years")
 	}
 	if !cmdArgs[SortGameType] {
 		fmt.Println()
-		a.SortGameType = parseBoolPrompt("Would you like to sort demos into folders by game type?", "sorting game types")
+		a.SortGameType = parseBoolPrompt("(2 / 16) Would you like to sort demos into folders by game type?", "sorting game types")
 	}
-	if !cmdArgs[KeepPrefix] {
+	if !cmdArgs[DateMajorDir] && (a.SortYear || a.SortGameType) { // Only ask if we're sorting into folders at all
 		fmt.Println()
-		a.KeepPrefix = parseBoolPrompt("Would you like to keep the current prefix (title before the date) of demos?", "keeping demo prefixes")
+		a.DateMajorDir = parseBoolPrompt("(3 / 16) Would you like the folder structure to prioritize sorting by year (year/gametype/demo.dem)?", "using date-major directories")
 	}
+
+	// Rename options
 	if !cmdArgs[RenameMap] {
 		fmt.Println()
-		a.RenameMap = parseBoolPrompt("Would you like to add the map name to a demo's name?", "renaming with map names")
+		a.RenameMap = parseBoolPrompt("(4 / 16) Would you like to add the map name to a demo's name?", "renaming with map names")
 	}
 	if !cmdArgs[RenameDuration] {
 		fmt.Println()
-		a.RenameDuration = parseBoolPrompt("Would you like to add the duration to a demo's name?", "renaming with demo durations")
+		a.RenameDuration = parseBoolPrompt("(5 / 16) Would you like to add the duration to a demo's name?", "renaming with demo durations")
 	}
-	if !cmdArgs[SearchDirs] {
+	if !cmdArgs[KeepPrefix] && (a.RenameMap || a.RenameDuration) { // Only ask if we are renaming at all
 		fmt.Println()
-		a.SearchDirs = parseBoolPrompt("Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories")
-	}
-	if !cmdArgs[Multithread] {
-		fmt.Println()
-		a.Multithread = parseBoolPrompt("Would you like the program to utilize multiple CPU threads?", "running on multiple threads")
-	}
-	if !cmdArgs[DateMajorDir] {
-		fmt.Println()
-		a.DateMajorDir = parseBoolPrompt("Would you like the folder structure to prioritize sorting by year (year/gametype/demo.dem)?", "using date-major directories")
-	}
-	if !cmdArgs[SetAsideCulled] {
-		fmt.Println()
-		a.SetAsideCulled = parseBoolPrompt("Would you like to set aside culled demos to a \"culled\" directory (folder), rather than deleting them?", "setting aside culled demos")
-	}
-	if !cmdArgs[TwoStageCull] {
-		fmt.Println()
-		a.TwoStageCull = parseBoolPrompt("Would you like to require two program runs to delete culled demos?\nThe first would set aside culled demos and the next would delete demos.", "using two stage culling")
-	}
-	if !cmdArgs[ShowConVars] {
-		fmt.Println()
-		a.ShowConVars = parseBoolPrompt("Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables")
+		a.KeepPrefix = parseBoolPrompt("(6 / 16) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes")
 	}
 
-	if !cmdArgs[ZipOlderThan] {
-		fmt.Println()
-		a.ZipOlderThan = uint8(parseIntPrompt("Enter the minimum age of a demo in years to compress to a .zip file.", 255))
-		if a.ZipOlderThan == 0 {
-			fmt.Println("Not zipping old demos")
-		} else {
-			fmt.Printf("Zipping demos older than: %d years\n", a.ZipOlderThan)
-		}
-	}
+	// Culling options
 	if !cmdArgs[CullBelow] {
 		fmt.Println()
-		a.CullBelow = parseIntPrompt("Enter the minimum length of a demo in seconds to mark for culling.", 300)
+		a.CullBelow = parseIntPrompt("(7 / 16) Enter the minimum length of a demo in seconds to mark for culling.", 300)
 		if a.CullBelow == 0 {
 			fmt.Println("Not culling short demos")
 		} else {
@@ -212,11 +210,17 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	// Get CullGameTypes key string
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
-		fmt.Println("Enter game types for demos you'd like to mark for culling.")
-		fmt.Print("T for Tournament, C for Casual, and/or M for MvM: ")
+		fmt.Println("(8 / 16) Enter game types for demos you'd like to mark for culling.")
+		fmt.Print("Presse [Enter] with no input to skip, or: T for Tournament, C for Casual, and/or M for MvM: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
-		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
+		if err != nil {
+			// Skip
+			if strings.HasSuffix(err.Error(), "newline") {
+				fmt.Println("Not culling any game types")
+				break
+			}
+			// Genuine error
 			log.Println("Error getting input from user:", err)
 			continue
 		}
@@ -239,10 +243,90 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 		break
 	}
 
+	if a.CullBelow != 0 || len(a.CullGameTypes) != 0 { // Only ask if we're culling at all
+		if !cmdArgs[SetAsideCulled] {
+			fmt.Println()
+			a.SetAsideCulled = parseBoolPrompt("(9 / 16) Would you like to set aside culled demos to a \"culled\" directory (folder), rather than deleting them?", "setting aside culled demos")
+		}
+
+		if !cmdArgs[TwoStageCull] && !a.SetAsideCulled { // If we aren't deleting culled, then don't ask (Combine to CullMode 0/1/2)
+			fmt.Println()
+			a.TwoStageCull = parseBoolPrompt("(10 / 16) Would you like to require two program runs to delete culled demos?\nThe first would set aside culled demos and the next would delete demos.", "using two stage culling")
+		}
+	}
+
+	// Get ZipOlderThan int
+	if !cmdArgs[ZipOlderThan] {
+		fmt.Println()
+		a.ZipOlderThan = uint8(parseIntPrompt("(11 / 16) Enter the minimum age of a demo in years to compress to a .zip file.", 255))
+		if a.ZipOlderThan == 0 {
+			fmt.Println("Not zipping old demos")
+		} else {
+			fmt.Printf("Zipping demos older than: %d years\n", a.ZipOlderThan)
+		}
+	}
+
+	// Get IgnoreWords strings
+	prompted := false
+	for !cmdArgs[IgnoreWords] {
+		if !prompted {
+			fmt.Print("\n(12 / 16) Enter a word that should tell the program to ignore demos containing specified word.\nOr press [Enter] with no input to continue: ")
+		}
+		input := ""
+		_, err := fmt.Scanln(&input)
+		if err != nil && !strings.HasSuffix(err.Error(), "newline") { // Genuine error
+			log.Println("Error getting input from user:", err)
+			continue
+		} else if err != nil && strings.HasSuffix(err.Error(), "newline") { // Done
+			if len(a.IgnoreWords) != 0 {
+				fmt.Println("Ignoring demos with titles containing:", a.IgnoreWords)
+			}
+			break
+		}
+
+		a.IgnoreWords = append(a.IgnoreWords, input)
+	}
+
+	// Misc
+	if !cmdArgs[SearchDirs] {
+		fmt.Println()
+		a.SearchDirs = parseBoolPrompt("(13 / 16) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories")
+	}
+	if !cmdArgs[Multithread] { // This is in a dumb spot
+		fmt.Println()
+		a.Multithread = parseBoolPrompt("(14 / 16) Would you like the program to utilize multiple CPU threads?", "running on multiple threads")
+	}
+
+	// Debug stuff: ShowConVars and Snipe
+	for {
+		fmt.Print("Would you like to skip the remaining options, mainly used for debugging the program?\nPress [Enter] to view remaining options or type \"skip\" to skip: ")
+		input := ""
+		_, err := fmt.Scanln(&input)
+		if err != nil {
+			// View remaining options
+			if strings.HasSuffix(err.Error(), "newline") {
+				break
+			}
+			// Genuine error
+			log.Println("Error getting input from user", err)
+			continue
+		}
+
+		if strings.EqualFold(input, "skip") {
+			fmt.Println("Skipping debug options")
+			return
+		}
+	}
+
+	if !cmdArgs[ShowConVars] {
+		fmt.Println()
+		a.ShowConVars = parseBoolPrompt("(15 / 16) Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables")
+	}
+
 	// Get Snipe string
 	for !cmdArgs[Snipe] {
 		fmt.Println()
-		fmt.Print("Enter exact filename to selectively execute on.\nOr press [Enter] with no input to continue: ")
+		fmt.Print("(16 / 16) Enter exact filename to selectively execute on.\nOr press [Enter] with no input to continue: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
@@ -253,27 +337,6 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 		a.Snipe = input
 		fmt.Println("Sniping file:", a.Snipe)
 		break
-	}
-
-	// Get IgnoreWords strings
-	prompted := false
-	for !cmdArgs[IgnoreWords] {
-		if !prompted {
-			fmt.Print("\nEnter a word that should tell the program to ignore demos containing specified word.\nOr press [Enter] with no input to continue: ")
-		}
-		input := ""
-		_, err := fmt.Scanln(&input)
-		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
-			log.Println("Error getting input from user:", err)
-			continue
-		} else if err != nil && strings.HasSuffix(err.Error(), "newline") {
-			if len(a.IgnoreWords) != 0 {
-				fmt.Println("Ignoring demos with titles containing:", a.IgnoreWords)
-			}
-			break
-		}
-
-		a.IgnoreWords = append(a.IgnoreWords, input)
 	}
 }
 
