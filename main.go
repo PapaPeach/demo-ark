@@ -5,9 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
+
+	shortcut "github.com/jxeng/shortcut"
 )
 
 type Demo = demoio.Demo
@@ -16,14 +22,16 @@ type Arguments struct {
 	Silent         bool     // Run program without prompts
 	SortYear       bool     // Group demos by year
 	SortGameType   bool     // Group demos by game type
+	DateMajorDir   bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
 	KeepPrefix     bool     // Rename options won't overwrite a detected ds_prefix
 	RenameMap      bool     // Rename the demo to contain the map name
 	RenameDuration bool     // Rename demo to contain the duration of the demo
 	SearchDirs     bool     // Search subdirectories within the current directory
 	Multithread    bool     // Allow the use of multiple cores / threads
-	DateMajorDir   bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
 	SetAsideCulled bool     // Set aside culled demos to a "culled" directory, rather than deleting them
 	TwoStageCull   bool     // Will first set aside culled demos, then on a subsequent run delete previously set aside demos
+	CreateShortcut bool     // Create a shortcut with the currently selected options
+	LaunchTF2      bool     // Launch TF2 alongside the program's execution
 	ShowConVars    bool     // Outputs console variables parsed from demo (mainly for debugging)
 	ZipOlderThan   uint8    // Zip demos older than this many years
 	CullBelow      uint16   // Number of seconds that demos below that duration will be deleted
@@ -33,17 +41,20 @@ type Arguments struct {
 }
 
 /* Keywords for command line arguments */
+// TODO: LaunchTF2 & CreateShortCut
 const Silent = "silent"                 //
 const SortYear = "sortyear"             //
 const SortGameType = "sortgametype"     //
+const DateMajorDir = "datemajordir"     //
 const KeepPrefix = "keepprefix"         //
 const RenameMap = "renamemap"           //
 const RenameDuration = "renameduration" //
 const SearchDirs = "searchdirs"         // TODO
 const Multithread = "multithread"       // TODO
-const DateMajorDir = "datemajordir"     //
 const SetAsideCulled = "setasideculled" //
 const TwoStageCull = "twostagecull"     // TODO
+const CreateShortcut = "createshortcut" //
+const LaunchTF2 = "launchtf2"           //
 const ShowConVars = "showconvars"       //
 const ZipOlderThan = "zipolderthan"     //
 const CullBelow = "cullbelow"           //
@@ -171,35 +182,35 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	// Sort options
 	if !cmdArgs[SortYear] {
 		fmt.Println()
-		a.SortYear = parseBoolPrompt("(1 / 16) Would you like to sort demos into folders by year?", "sorting years")
+		a.SortYear = parseBoolPrompt("(1 / 18) Would you like to sort demos into folders by year?", "sorting years")
 	}
 	if !cmdArgs[SortGameType] {
 		fmt.Println()
-		a.SortGameType = parseBoolPrompt("(2 / 16) Would you like to sort demos into folders by game type?", "sorting game types")
+		a.SortGameType = parseBoolPrompt("(2 / 18) Would you like to sort demos into folders by game type?", "sorting game types")
 	}
 	if !cmdArgs[DateMajorDir] && (a.SortYear || a.SortGameType) { // Only ask if we're sorting into folders at all
 		fmt.Println()
-		a.DateMajorDir = parseBoolPrompt("(3 / 16) Would you like the folder structure to prioritize sorting by year (year/gametype/demo.dem)?", "using date-major directories")
+		a.DateMajorDir = parseBoolPrompt("(3 / 18) Would you like the folder structure to prioritize sorting by year (year/gametype/demo.dem)?", "using date-major directories")
 	}
 
 	// Rename options
 	if !cmdArgs[RenameMap] {
 		fmt.Println()
-		a.RenameMap = parseBoolPrompt("(4 / 16) Would you like to add the map name to a demo's name?", "renaming with map names")
+		a.RenameMap = parseBoolPrompt("(4 / 18) Would you like to add the map name to a demo's name?", "renaming with map names")
 	}
 	if !cmdArgs[RenameDuration] {
 		fmt.Println()
-		a.RenameDuration = parseBoolPrompt("(5 / 16) Would you like to add the duration to a demo's name?", "renaming with demo durations")
+		a.RenameDuration = parseBoolPrompt("(5 / 18) Would you like to add the duration to a demo's name?", "renaming with demo durations")
 	}
 	if !cmdArgs[KeepPrefix] && (a.RenameMap || a.RenameDuration) { // Only ask if we are renaming at all
 		fmt.Println()
-		a.KeepPrefix = parseBoolPrompt("(6 / 16) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes")
+		a.KeepPrefix = parseBoolPrompt("(6 / 18) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes")
 	}
 
 	// Culling options
 	if !cmdArgs[CullBelow] {
 		fmt.Println()
-		a.CullBelow = parseIntPrompt("(7 / 16) Enter the minimum length of a demo in seconds to mark for culling.", 300)
+		a.CullBelow = parseIntPrompt("(7 / 18) Enter the minimum length of a demo in seconds to mark for culling.", 300)
 		if a.CullBelow == 0 {
 			fmt.Println("Not culling short demos")
 		} else {
@@ -210,7 +221,7 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	// Get CullGameTypes key string
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
-		fmt.Println("(8 / 16) Enter game types for demos you'd like to mark for culling.")
+		fmt.Println("(8 / 18) Enter game types for demos you'd like to mark for culling.")
 		fmt.Print("Presse [Enter] with no input to skip, or: T for Tournament, C for Casual, and/or M for MvM: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
@@ -246,19 +257,19 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	if a.CullBelow != 0 || len(a.CullGameTypes) != 0 { // Only ask if we're culling at all
 		if !cmdArgs[SetAsideCulled] {
 			fmt.Println()
-			a.SetAsideCulled = parseBoolPrompt("(9 / 16) Would you like to set aside culled demos to a \"culled\" directory (folder), rather than deleting them?", "setting aside culled demos")
+			a.SetAsideCulled = parseBoolPrompt("(9 / 18) Would you like to set aside culled demos to a \"culled\" directory (folder), rather than deleting them?", "setting aside culled demos")
 		}
 
 		if !cmdArgs[TwoStageCull] && !a.SetAsideCulled { // If we aren't deleting culled, then don't ask (Combine to CullMode 0/1/2)
 			fmt.Println()
-			a.TwoStageCull = parseBoolPrompt("(10 / 16) Would you like to require two program runs to delete culled demos?\nThe first would set aside culled demos and the next would delete demos.", "using two stage culling")
+			a.TwoStageCull = parseBoolPrompt("(10 / 18) Would you like to require two program runs to delete culled demos?\nThe first would set aside culled demos and the next would delete demos.", "using two stage culling")
 		}
 	}
 
 	// Get ZipOlderThan int
 	if !cmdArgs[ZipOlderThan] {
 		fmt.Println()
-		a.ZipOlderThan = uint8(parseIntPrompt("(11 / 16) Enter the minimum age of a demo in years to compress to a .zip file.", 255))
+		a.ZipOlderThan = uint8(parseIntPrompt("(11 / 18) Enter the minimum age of a demo in years to compress to a .zip file.", 255))
 		if a.ZipOlderThan == 0 {
 			fmt.Println("Not zipping old demos")
 		} else {
@@ -270,7 +281,7 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	prompted := false
 	for !cmdArgs[IgnoreWords] {
 		if !prompted {
-			fmt.Print("\n(12 / 16) Enter a word that should tell the program to ignore demos containing specified word.\nOr press [Enter] with no input to continue: ")
+			fmt.Print("\n(12 / 18) Enter a word that should tell the program to ignore demos containing specified word.\nOr press [Enter] with no input to continue: ")
 		}
 		input := ""
 		_, err := fmt.Scanln(&input)
@@ -290,11 +301,21 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	// Misc
 	if !cmdArgs[SearchDirs] {
 		fmt.Println()
-		a.SearchDirs = parseBoolPrompt("(13 / 16) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories")
+		a.SearchDirs = parseBoolPrompt("(13 / 18) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories")
 	}
 	if !cmdArgs[Multithread] { // This is in a dumb spot
 		fmt.Println()
-		a.Multithread = parseBoolPrompt("(14 / 16) Would you like the program to utilize multiple CPU threads?", "running on multiple threads")
+		a.Multithread = parseBoolPrompt("(14 / 18) Would you like the program to utilize multiple CPU threads?", "running on multiple threads")
+	}
+
+	// Get shortcut options
+	if !cmdArgs[CreateShortcut] {
+		fmt.Println()
+		a.CreateShortcut = parseBoolPrompt("(15 / 18) Would you like to create a shortcut to launch Demo Ark with selected options?", "creating a shortcut to run program with selected options")
+	}
+	if !cmdArgs[LaunchTF2] && a.CreateShortcut {
+		fmt.Println()
+		a.LaunchTF2 = parseBoolPrompt("(16 / 18) Would you like the shortcut to launch TF2 alongside Demo Ark?", "launching TF2 while program runs")
 	}
 
 	// Debug stuff: ShowConVars and Snipe
@@ -320,13 +341,13 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 
 	if !cmdArgs[ShowConVars] {
 		fmt.Println()
-		a.ShowConVars = parseBoolPrompt("(15 / 16) Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables")
+		a.ShowConVars = parseBoolPrompt("(17 / 18) Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables")
 	}
 
 	// Get Snipe string
 	for !cmdArgs[Snipe] {
 		fmt.Println()
-		fmt.Print("(16 / 16) Enter exact filename to selectively execute on.\nOr press [Enter] with no input to continue: ")
+		fmt.Print("(18 / 18) Enter exact filename to selectively execute on.\nOr press [Enter] with no input to continue: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
@@ -359,14 +380,16 @@ func getArgs() Arguments {
 		Silent:         false,
 		SortYear:       true,
 		SortGameType:   true,
+		DateMajorDir:   true,
 		KeepPrefix:     true,
 		RenameMap:      false,
 		RenameDuration: false,
 		SearchDirs:     false,
 		Multithread:    true,
-		DateMajorDir:   true,
 		SetAsideCulled: true,
 		TwoStageCull:   false,
+		CreateShortcut: false,
+		LaunchTF2:      false,
 		ShowConVars:    false,
 		ZipOlderThan:   1,
 		CullBelow:      30,
@@ -380,12 +403,12 @@ func getArgs() Arguments {
 	a.Silent, cmdArgs[Silent] = parseBoolArg(args, Silent, a.Silent, "running silently")
 	a.SortYear, cmdArgs[SortYear] = parseBoolArg(args, SortYear, a.SortYear, "sorting years")
 	a.SortGameType, cmdArgs[SortGameType] = parseBoolArg(args, SortGameType, a.SortGameType, "sorting game types")
+	a.DateMajorDir, cmdArgs[DateMajorDir] = parseBoolArg(args, DateMajorDir, a.DateMajorDir, "using date-major directories")
 	a.KeepPrefix, cmdArgs[KeepPrefix] = parseBoolArg(args, KeepPrefix, a.KeepPrefix, "keeping demo prefixes")
 	a.RenameMap, cmdArgs[RenameMap] = parseBoolArg(args, RenameMap, a.RenameMap, "renaming with map names")
 	a.RenameDuration, cmdArgs[RenameDuration] = parseBoolArg(args, RenameDuration, a.RenameDuration, "renaming with demo durations")
 	a.SearchDirs, cmdArgs[SearchDirs] = parseBoolArg(args, SearchDirs, a.SearchDirs, "searching subdirectories")
 	a.Multithread, cmdArgs[Multithread] = parseBoolArg(args, Multithread, a.Multithread, "running on multiple threads")
-	a.DateMajorDir, cmdArgs[DateMajorDir] = parseBoolArg(args, DateMajorDir, a.DateMajorDir, "using date-major directories")
 	a.SetAsideCulled, cmdArgs[SetAsideCulled] = parseBoolArg(args, SetAsideCulled, a.SetAsideCulled, "setting aside culled demos")
 	a.TwoStageCull, cmdArgs[TwoStageCull] = parseBoolArg(args, TwoStageCull, a.TwoStageCull, "using two stage culling")
 
@@ -447,6 +470,9 @@ func getArgs() Arguments {
 		fmt.Println("Ignoring words:", a.IgnoreWords)
 	}
 
+	a.LaunchTF2, cmdArgs[LaunchTF2] = parseBoolArg(args, LaunchTF2, false, "launching TF2 while program runs")
+	a.CreateShortcut, cmdArgs[CreateShortcut] = parseBoolArg(args, CreateShortcut, false, "creating a shortcut to run program with selected options")
+
 	// Get arguments mainly used for debugging
 	a.ShowConVars, cmdArgs[ShowConVars] = parseBoolArg(args, ShowConVars, a.ShowConVars, "showing parsed console variables")
 
@@ -466,6 +492,130 @@ func getArgs() Arguments {
 	}
 
 	return a
+}
+
+/* Launches TF2 via Steam api to maintain user's launch options */
+func launchGame() {
+	// Get correct launch command for given OS
+	url := "steam://rungameid/440"
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	case "linux":
+		cmd = exec.Command("xdg-open", url)
+	case "darwin": // Mac
+		cmd = exec.Command("open", url)
+	default:
+		log.Println("Detected unsupported operating system.")
+		enterToExit(false)
+	}
+
+	// Run command and continue with program execution
+	err := cmd.Start()
+	if err != nil {
+		log.Println("Error launching TF2:", err)
+		enterToExit(false)
+	}
+}
+
+/* Creates a shortcut to run the program with the currently applied options */
+func createShortcut(args Arguments) {
+	// Get filepath of program
+	programPath, err := os.Executable()
+	if err != nil {
+		log.Println("Error getting program path for shortcut:", err)
+		enterToExit(false)
+	}
+
+	// Get currently applied options
+	argsString := "Silent=1"
+	argsTypes := reflect.TypeOf(args)
+	argsValues := reflect.ValueOf(args)
+	for i := 1; i < argsTypes.NumField(); i++ {
+		// Format currently applied options as expected arguments
+		value := 0
+		switch argsValues.Field(i).Kind() {
+		case reflect.Bool:
+			// Skip create shortcut
+			if strings.EqualFold(argsTypes.Field(i).Name, CreateShortcut) {
+				continue
+			}
+			// Simplify booleans arguments
+			if argsValues.Field(i).Bool() {
+				value = 1
+			}
+			argsString += fmt.Sprintf(" %s=%d", argsTypes.Field(i).Name, value)
+
+		case reflect.Uint8: // Int arguments
+			fallthrough
+		case reflect.Uint16:
+			argsString += fmt.Sprintf(" %s=%v", argsTypes.Field(i).Name, argsValues.Field(i))
+
+		case reflect.String: // String arguments
+			if len(argsValues.Field(i).String()) == 0 {
+				continue
+			}
+			argsString += fmt.Sprintf(" %s=%s", argsTypes.Field(i).Name, argsValues.Field(i))
+
+		case reflect.Slice: // Slice argument
+			if argsValues.Field(i).Len() == 0 {
+				continue
+			}
+			argsString += fmt.Sprintf(" %s=", argsTypes.Field(i).Name)
+			for j := range argsValues.Field(i).Len() {
+				argsString += fmt.Sprintf("%s ", argsValues.Field(i).Index(j))
+			}
+		}
+	}
+
+	// Get filepath to TF2's game.ico
+	iconPath, err := os.Getwd()
+	if err != nil {
+		log.Println("Error getting working directory for shortcut icon:", err)
+	}
+
+	// Make sure path is in tf directory
+	tf := filepath.Join("Team Fortress 2", "tf")
+	tfIndex := strings.Index(iconPath, tf)
+	if tfIndex == -1 {
+		fmt.Println("Program is not currently in a subdirectory of tf, cannot locate TF2 icon.")
+	}
+	iconPath = filepath.Join(iconPath[:tfIndex+len(tf)], "resource")
+
+	// Get correct icon for os
+	switch runtime.GOOS {
+	case "windows":
+		iconPath = filepath.Join(iconPath, "game.ico")
+	case "linux":
+		fallthrough
+	case "darwin": // Mac
+		iconPath = filepath.Join(iconPath, "game.icns")
+	default:
+		log.Println("Detected unsupported operating system.")
+		enterToExit(false)
+	}
+
+	// Create shortcut
+	if runtime.GOOS == "windows" {
+		sc := shortcut.Shortcut{
+			ShortcutPath:     "./DemoArk Shortcut.lnk",
+			Target:           programPath,
+			IconLocation:     iconPath,
+			Arguments:        argsString,
+			Description:      "",
+			Hotkey:           "",
+			WindowStyle:      "1",
+			WorkingDirectory: "",
+		}
+		err = shortcut.Create(sc)
+		if err != nil {
+			log.Println("Error creating desktop shortcut:", err)
+			enterToExit(false)
+		}
+	} else {
+		fmt.Printf("%s %s\nPath to icon: %s\n", programPath, argsString, iconPath)
+	}
 }
 
 /* Prompts user to press enter to exit the program, then exit when entered */
@@ -490,6 +640,17 @@ func main() {
 
 	// Get commandline arguments
 	args := getArgs()
+
+	// Just create shortcut
+	if args.CreateShortcut {
+		createShortcut(args)
+		enterToExit(args.Silent)
+	}
+
+	// Launch TF2 while program runs
+	if args.LaunchTF2 {
+		launchGame()
+	}
 
 	// Get demos
 	var demoList []demoio.Demo
