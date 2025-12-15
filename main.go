@@ -40,6 +40,29 @@ type Arguments struct {
 	IgnoreWords    []string // Ignore file / folder names containing string
 }
 
+// Default option values
+var def = Arguments{
+	Silent:         false,
+	SortYear:       true,
+	SortGameType:   true,
+	DateMajorDir:   true,
+	KeepPrefix:     true,
+	RenameMap:      false,
+	RenameDuration: false,
+	SearchDirs:     false,
+	Multithread:    true,
+	SetAsideCulled: true,
+	TwoStageCull:   false,
+	CreateShortcut: false,
+	LaunchTF2:      false,
+	ShowConVars:    false,
+	ZipOlderThan:   1,
+	CullBelow:      30,
+	CullGameTypes:  "",
+	Snipe:          "",
+	IgnoreWords:    []string{"reference"},
+}
+
 /* Keywords for command line arguments */
 // TODO: LaunchTF2 & CreateShortCut
 const Silent = "silent"                 //
@@ -107,55 +130,78 @@ func parseIntArg(args []string, keyword string, def uint16) (uint16, bool) {
 }
 
 /* Parses the boolean value from a user response to a given prompt */
-func parseBoolPrompt(prompt string, message string) bool {
+func parseBoolPrompt(prompt string, message string, def bool) (bool, bool) {
 	for {
 		// Prompt user
-		fmt.Print(prompt, " [Y] / [N]: ")
+		fmt.Print(prompt, " [Y]es / [N]o / [D]efault / [B]ack: ")
 
 		// Receive input
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
-			log.Println("Error getting input from user", err)
+			log.Println("Error getting input from user:", err)
 			continue
 		}
 
 		// Parse input
-		if strings.EqualFold(input, "y") {
+		input = strings.ToLower(input[:1])
+		switch input {
+		case "y": // Yes
 			fmt.Println(strings.ToUpper(message[:1]) + message[1:])
-			return true
-		} else if strings.EqualFold(input, "n") {
+			return true, false
+		case "n": // No
 			fmt.Println("Not", message)
-			return false
+			return false, false
+		case "d": // Default
+			fmt.Println("Using default setting")
+			return def, false
+		case "b": // Back
+			return def, true
 		}
 	}
 }
 
 /* Parse the integer value from a user response to a given prompt */
-func parseIntPrompt(prompt string, max int) uint16 {
+func parseIntPrompt(prompt string, max int, def uint16) (uint16, bool) {
 	for {
 		// Prompt user
-		fmt.Printf("%s 0 (disabled) - %d: ", prompt, max)
+		fmt.Printf("%s 0 (disabled) - %d / [D]efault / [B]ack: ", prompt, max)
 
 		// Receive input
-		input := -1
+		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
-			log.Println("Error getting input from user", err)
+			log.Println("Error getting input from user:", err)
 			continue
 		}
 
-		// Parse input
-		if 0 <= input && input <= max {
-			return uint16(input)
+		// Parse text input
+		input = strings.ToLower(input[:1])
+		switch input {
+		case "d": // Default
+			fmt.Println("Using default setting")
+			return def, false
+		case "b": // Back
+			return def, true
 		}
+
+		// Parse input
+		inputInt, err := strconv.Atoi(input)
+		if err != nil && !strings.HasSuffix(err.Error(), "invalid syntax") { // Genuine error
+			log.Println("Error parsing response to integer prompt from user:", err)
+		}
+		if 0 <= inputInt && inputInt <= max {
+			return uint16(inputInt), false
+		}
+
 	}
 }
 
 /* Prompts user for options not set by command line arguments */
 func promptArgs(a *Arguments, cmdArgs map[string]bool) {
-	// Explain prompts
 	defer fmt.Println()
+prompt0:
+	// Explain prompts
 	fmt.Println("Some options were not set by the program launch arguments. There may be up to 16 options to set.")
 	for {
 		fmt.Print("Would you like to skip setting options and run with remaining options set to defaults?\nPress [Enter] to view remaining options or type \"skip\" to skip: ")
@@ -167,7 +213,7 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 				break
 			}
 			// Genuine error
-			log.Println("Error getting input from user", err)
+			log.Println("Error getting input from user:", err)
 			continue
 		}
 
@@ -180,37 +226,80 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 
 	// Ignore Silent, it can only be set by command line argument
 	// Sort options
+prompt1:
 	if !cmdArgs[SortYear] {
 		fmt.Println()
-		a.SortYear = parseBoolPrompt("(1 / 18) Would you like to sort demos into folders by year?", "sorting years")
+		back := false
+		a.SortYear, back = parseBoolPrompt("(1 / 18) Would you like to sort demos into folders by year?", "sorting years", def.SortYear)
+		if back {
+			goto prompt0
+		}
 	}
+prompt2:
 	if !cmdArgs[SortGameType] {
 		fmt.Println()
-		a.SortGameType = parseBoolPrompt("(2 / 18) Would you like to sort demos into folders by game type?", "sorting game types")
+		back := false
+		a.SortGameType, back = parseBoolPrompt("(2 / 18) Would you like to sort demos into folders by game type?", "sorting game types", def.SortGameType)
+		if back { // Handle back command
+			goto prompt1
+		}
 	}
+prompt3:
 	if !cmdArgs[DateMajorDir] && (a.SortYear || a.SortGameType) { // Only ask if we're sorting into folders at all
 		fmt.Println()
-		a.DateMajorDir = parseBoolPrompt("(3 / 18) Would you like the folder structure to prioritize sorting by year (year/gametype/demo.dem)?", "using date-major directories")
+		back := false
+		a.DateMajorDir, back = parseBoolPrompt("(3 / 18) Would you like the folder structure to prioritize sorting by year (year/gametype/demo.dem)?", "using date-major directories", def.DateMajorDir)
+		if back { // Handle back command
+			goto prompt2
+		}
 	}
 
 	// Rename options
+prompt4:
 	if !cmdArgs[RenameMap] {
 		fmt.Println()
-		a.RenameMap = parseBoolPrompt("(4 / 18) Would you like to add the map name to a demo's name?", "renaming with map names")
+		back := false
+		a.RenameMap, back = parseBoolPrompt("(4 / 18) Would you like to add the map name to a demo's name?", "renaming with map names", def.RenameMap)
+		if back { // Handle back command
+			if a.SortYear || a.SortGameType { // Special case for skip logic
+				goto prompt3
+			}
+			goto prompt2
+		}
 	}
+prompt5:
 	if !cmdArgs[RenameDuration] {
 		fmt.Println()
-		a.RenameDuration = parseBoolPrompt("(5 / 18) Would you like to add the duration to a demo's name?", "renaming with demo durations")
+		back := false
+		a.RenameDuration, back = parseBoolPrompt("(5 / 18) Would you like to add the duration to a demo's name?", "renaming with demo durations", def.RenameDuration)
+		if back { // Handle back command
+			goto prompt4
+		}
 	}
+prompt6:
 	if !cmdArgs[KeepPrefix] && (a.RenameMap || a.RenameDuration) { // Only ask if we are renaming at all
 		fmt.Println()
-		a.KeepPrefix = parseBoolPrompt("(6 / 18) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes")
+		back := false
+		a.KeepPrefix, back = parseBoolPrompt("(6 / 18) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes", def.KeepPrefix)
+		if back { // Handle back command
+			goto prompt5
+		}
 	}
 
 	// Culling options
+prompt7:
 	if !cmdArgs[CullBelow] {
 		fmt.Println()
-		a.CullBelow = parseIntPrompt("(7 / 18) Enter the minimum length of a demo in seconds to mark for culling.", 300)
+		back := false
+		a.CullBelow, back = parseIntPrompt("(7 / 18) Enter the minimum length of a demo in seconds to mark for culling.", 300, def.CullBelow)
+		if back { // Handle back command
+			if a.RenameMap || a.RenameDuration { // Special case for skip logic
+				goto prompt6
+			}
+			goto prompt5
+		}
+
+		// Handle option value
 		if a.CullBelow == 0 {
 			fmt.Println("Not culling short demos")
 		} else {
@@ -219,10 +308,11 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	}
 
 	// Get CullGameTypes key string
+prompt8:
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
 		fmt.Println("(8 / 18) Enter game types for demos you'd like to mark for culling.")
-		fmt.Print("Presse [Enter] with no input to skip, or: T for Tournament, C for Casual, and/or M for MvM: ")
+		fmt.Print("Presse [Enter] with no input to skip / [T]ournament / [C]asual / [M]vM / [D]efault / [B]ack:")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil {
@@ -234,6 +324,16 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 			// Genuine error
 			log.Println("Error getting input from user:", err)
 			continue
+		}
+
+		// Handle Default or Back command
+		switch strings.ToLower(input[:1]) {
+		case "d":
+			fmt.Println("Using default value")
+			a.CullGameTypes = def.CullGameTypes
+			goto prompt9
+		case "b":
+			goto prompt7
 		}
 
 		// Validate value length
@@ -254,22 +354,49 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 		break
 	}
 
-	if a.CullBelow != 0 || len(a.CullGameTypes) != 0 { // Only ask if we're culling at all
-		if !cmdArgs[SetAsideCulled] {
-			fmt.Println()
-			a.SetAsideCulled = parseBoolPrompt("(9 / 18) Would you like to set aside culled demos to a \"culled\" directory (folder), rather than deleting them?", "setting aside culled demos")
+prompt9:
+	// Only ask if we're culling at all
+	if !cmdArgs[SetAsideCulled] && (a.CullBelow != 0 || len(a.CullGameTypes) != 0) {
+		fmt.Println()
+		back := false
+		a.SetAsideCulled, back = parseBoolPrompt("(9 / 18) Would you like to set aside culled demos to a \"culled\" directory (folder), rather than deleting them?", "setting aside culled demos", def.SetAsideCulled)
+		if back { // Handle back command
+			goto prompt8
 		}
+	}
 
-		if !cmdArgs[TwoStageCull] && !a.SetAsideCulled { // If we aren't deleting culled, then don't ask (Combine to CullMode 0/1/2)
-			fmt.Println()
-			a.TwoStageCull = parseBoolPrompt("(10 / 18) Would you like to require two program runs to delete culled demos?\nThe first would set aside culled demos and the next would delete demos.", "using two stage culling")
+prompt10:
+	// If we aren't deleting culled, then don't ask (Combine to CullMode 0/1/2)
+	if !cmdArgs[TwoStageCull] && !a.SetAsideCulled && (a.CullBelow != 0 || len(a.CullGameTypes) != 0) {
+		fmt.Println()
+		back := false
+		a.TwoStageCull, back = parseBoolPrompt("(10 / 18) Would you like to require two program runs to delete culled demos?\nThe first would set aside culled demos and the next would delete demos.", "using two stage culling", def.TwoStageCull)
+		if back { // Handle back command
+			if a.CullBelow != 0 || len(a.CullGameTypes) != 0 {
+				goto prompt9
+			}
+			goto prompt8
 		}
 	}
 
 	// Get ZipOlderThan int
+prompt11:
 	if !cmdArgs[ZipOlderThan] {
 		fmt.Println()
-		a.ZipOlderThan = uint8(parseIntPrompt("(11 / 18) Enter the minimum age of a demo in years to compress to a .zip file.", 255))
+		tempZipOlderThan, back := parseIntPrompt("(11 / 18) Enter the minimum age of a demo in years to compress to a .zip file.", 255, uint16(def.ZipOlderThan))
+		if back { // Handle back command
+			switch { // Special cases for skip logic
+			case !a.SetAsideCulled && (a.CullBelow != 0 || len(a.CullGameTypes) != 0):
+				goto prompt10
+			case a.CullBelow != 0 || len(a.CullGameTypes) != 0:
+				goto prompt9
+			default:
+				goto prompt8
+			}
+		}
+
+		// Handle option value
+		a.ZipOlderThan = uint8(tempZipOlderThan)
 		if a.ZipOlderThan == 0 {
 			fmt.Println("Not zipping old demos")
 		} else {
@@ -278,10 +405,13 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	}
 
 	// Get IgnoreWords strings
+prompt12:
 	prompted := false
 	for !cmdArgs[IgnoreWords] {
 		if !prompted {
-			fmt.Print("\n(12 / 18) Enter a word that should tell the program to ignore demos containing specified word.\nOr press [Enter] with no input to continue: ")
+			fmt.Print("\n(12 / 18) Enter a word that should tell the program to ignore demos containing specified word.\nPress [Enter] with no input to skip / [!Default] / [!Back]: ")
+		} else {
+			fmt.Print("Press [Enter] with no input to continue: ")
 		}
 		input := ""
 		_, err := fmt.Scanln(&input)
@@ -295,27 +425,61 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 			break
 		}
 
+		// Handle Default or Back command
+		if !prompted {
+			switch strings.ToLower(input) {
+			case "!default":
+				fmt.Println("Using default value")
+				a.IgnoreWords = def.IgnoreWords
+				goto prompt13
+			case "!back":
+				goto prompt11
+			}
+
+			prompted = true
+		}
+
 		a.IgnoreWords = append(a.IgnoreWords, input)
 	}
 
 	// Misc
+prompt13:
 	if !cmdArgs[SearchDirs] {
 		fmt.Println()
-		a.SearchDirs = parseBoolPrompt("(13 / 18) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories")
+		back := false
+		a.SearchDirs, back = parseBoolPrompt("(13 / 18) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories", def.SearchDirs)
+		if back { // Handle back command
+			goto prompt12
+		}
 	}
+prompt14:
 	if !cmdArgs[Multithread] { // This is in a dumb spot
 		fmt.Println()
-		a.Multithread = parseBoolPrompt("(14 / 18) Would you like the program to utilize multiple CPU threads?", "running on multiple threads")
+		back := false
+		a.Multithread, back = parseBoolPrompt("(14 / 18) Would you like the program to utilize multiple CPU threads?", "running on multiple threads", def.Multithread)
+		if back { // Handle back command
+			goto prompt13
+		}
 	}
 
 	// Get shortcut options
+prompt15:
 	if !cmdArgs[CreateShortcut] {
 		fmt.Println()
-		a.CreateShortcut = parseBoolPrompt("(15 / 18) Would you like to create a shortcut to launch Demo Ark with selected options?", "creating a shortcut to run program with selected options")
+		back := false
+		a.CreateShortcut, back = parseBoolPrompt("(15 / 18) Would you like to create a shortcut to launch Demo Ark with selected options?", "creating a shortcut to run program with selected options", def.CreateShortcut)
+		if back { // Handle back command
+			goto prompt14
+		}
 	}
+prompt16:
 	if !cmdArgs[LaunchTF2] && a.CreateShortcut {
 		fmt.Println()
-		a.LaunchTF2 = parseBoolPrompt("(16 / 18) Would you like the shortcut to launch TF2 alongside Demo Ark?", "launching TF2 while program runs")
+		back := false
+		a.LaunchTF2, back = parseBoolPrompt("(16 / 18) Would you like the shortcut to launch TF2 alongside Demo Ark?", "launching TF2 while program runs", def.LaunchTF2)
+		if back { // Handle back command
+			goto prompt15
+		}
 	}
 
 	// Debug stuff: ShowConVars and Snipe
@@ -329,7 +493,7 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 				break
 			}
 			// Genuine error
-			log.Println("Error getting input from user", err)
+			log.Println("Error getting input from user:", err)
 			continue
 		}
 
@@ -339,20 +503,38 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 		}
 	}
 
+prompt17:
 	if !cmdArgs[ShowConVars] {
 		fmt.Println()
-		a.ShowConVars = parseBoolPrompt("(17 / 18) Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables")
+		back := false
+		a.ShowConVars, back = parseBoolPrompt("(17 / 18) Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables", def.ShowConVars)
+		if back { // Handle back command
+			if a.CreateShortcut { // Special case for skip logic
+				goto prompt16
+			}
+			goto prompt15
+		}
 	}
 
 	// Get Snipe string
 	for !cmdArgs[Snipe] {
 		fmt.Println()
-		fmt.Print("(18 / 18) Enter exact filename to selectively execute on.\nOr press [Enter] with no input to continue: ")
+		fmt.Print("(18 / 18) Enter exact filename to selectively execute on.\nPress [Enter] with no input to skip / [!Default] / [!Back]: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
 			log.Println("Error getting input from user:", err)
 			continue
+		}
+
+		// Handle Default or Back command
+		switch strings.ToLower(input) {
+		case "!default":
+			fmt.Println("Using default value")
+			a.Snipe = def.Snipe
+			return
+		case "!back":
+			goto prompt17
 		}
 
 		a.Snipe = input
@@ -376,27 +558,7 @@ func getArgs() Arguments {
 	}
 
 	// Set defaults
-	a := Arguments{
-		Silent:         false,
-		SortYear:       true,
-		SortGameType:   true,
-		DateMajorDir:   true,
-		KeepPrefix:     true,
-		RenameMap:      false,
-		RenameDuration: false,
-		SearchDirs:     false,
-		Multithread:    true,
-		SetAsideCulled: true,
-		TwoStageCull:   false,
-		CreateShortcut: false,
-		LaunchTF2:      false,
-		ShowConVars:    false,
-		ZipOlderThan:   1,
-		CullBelow:      30,
-		CullGameTypes:  "",
-		Snipe:          "",
-		IgnoreWords:    []string{"reference"},
-	}
+	a := def
 	cmdArgs := make(map[string]bool)
 
 	// Get bool arg values
