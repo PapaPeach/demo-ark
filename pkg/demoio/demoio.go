@@ -415,7 +415,7 @@ func CheckConVar(conVars []string, wishStr string, wishVal string) bool {
 
 // TODO: Update _events.json
 /* Moves files in a list of files to a directory */
-func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, setAsideCulled bool, showConVars bool) {
+func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, showConVars bool, cullMode uint8) {
 	// Handle length accordingly
 	switch length := len(demos); length {
 	case 0: // Skip to culling if no demos to sort
@@ -482,7 +482,17 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 	}
 
 cull:
-	// If there's no demos to cull, skip
+	// Remove previously culled for two-stage cull
+	culledDir := "demos_culled"
+	if cullMode == 1 {
+		err := os.RemoveAll(filepath.Join(".", culledDir))
+		if err != nil {
+			log.Println(err)
+			os.Exit(2)
+		}
+	}
+
+	// If there's no demos to cull, skip culling
 	length := len(culled)
 	if length == 0 {
 		return
@@ -496,8 +506,7 @@ cull:
 	}
 
 	// Create the culled directory
-	culledDir := "demos_culled"
-	if setAsideCulled {
+	if cullMode < 2 {
 		// Make directory to move demo to
 		err := os.MkdirAll(culledDir, os.ModePerm)
 		if err != nil && !errors.Is(err, os.ErrExist) {
@@ -509,7 +518,7 @@ cull:
 	// Cull demos
 	for _, demo := range culled {
 		// Delete culled demos
-		if !setAsideCulled {
+		if cullMode == 2 {
 			err := os.Remove(demo.Name)
 			if err != nil {
 				log.Println("Error deleting culled demo:", err)
