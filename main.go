@@ -112,7 +112,7 @@ func parseIntArg(args []string, keyword string, def uint16) (uint16, bool) {
 	for _, arg := range args {
 		// Locate keyword=...
 		if strings.HasPrefix(arg, keyword+"=") {
-			value, err := strconv.Atoi(arg[len(keyword)+1:])
+			value, err := strconv.ParseUint(arg[len(keyword)+1:], 10, 0)
 			if err != nil {
 				log.Printf("Invalid argument value: %s\n", arg)
 				enterToExit(false)
@@ -129,7 +129,7 @@ func parseIntArg(args []string, keyword string, def uint16) (uint16, bool) {
 func parseBoolPrompt(prompt string, message string, def bool) (bool, bool) {
 	for {
 		// Prompt user
-		fmt.Print(prompt, " [Y]es / [N]o / [D]efault / [B]ack: ")
+		fmt.Print(prompt, "\n[Y]es / [N]o / [D]efault / [B]ack: ")
 
 		// Receive input
 		input := ""
@@ -158,10 +158,10 @@ func parseBoolPrompt(prompt string, message string, def bool) (bool, bool) {
 }
 
 /* Parse the integer value from a user response to a given prompt */
-func parseIntPrompt(prompt string, max int, def uint16) (uint16, bool) {
+func parseIntPrompt(prompt string, max uint64, def uint16) (uint16, bool) {
 	for {
 		// Prompt user
-		fmt.Printf("%s 0 (disabled) - %d / [D]efault / [B]ack: ", prompt, max)
+		fmt.Printf("%s\n0 (disabled) - %d / [D]efault / [B]ack: ", prompt, max)
 
 		// Receive input
 		input := ""
@@ -182,11 +182,11 @@ func parseIntPrompt(prompt string, max int, def uint16) (uint16, bool) {
 		}
 
 		// Parse input
-		inputInt, err := strconv.Atoi(input)
+		inputInt, err := strconv.ParseUint(input, 10, 0)
 		if err != nil && !strings.HasSuffix(err.Error(), "invalid syntax") { // Genuine error
 			log.Println("Error parsing response to integer prompt from user:", err)
 		}
-		if 0 <= inputInt && inputInt <= max {
+		if inputInt <= max {
 			return uint16(inputInt), false
 		}
 
@@ -351,17 +351,49 @@ prompt8:
 	}
 
 prompt9:
-	// TODO: Fix prompt
 	// Only ask if we're culling at all
 	if !cmdArgs[CullMode] && (a.CullBelow != 0 || len(a.CullGameTypes) != 0) {
 		fmt.Println()
-		tempCullMode, back := parseIntPrompt("(9 / 17) What would you like to do with culled demos?\n[0] Set aside to \"culled\" folder / [1] Set aside to be deleted on the next Demo Ark run / [2] Delete immediately", 2, uint16(def.CullMode))
-		if back { // Handle back command
-			goto prompt8
+		for {
+			// Prompt user
+			fmt.Print("(9 / 17) What would you like to do with culled demos?\n[0] Set aside to \"culled\" folder / [1] Set aside to be deleted on the next Demo Ark run / [2] Delete immediately / [D]efault / [B]ack: ")
+
+			// Receive input
+			input := ""
+			_, err := fmt.Scanln(&input)
+			if err != nil && !strings.HasSuffix(err.Error(), "newline") {
+				log.Println("Error getting input from user:", err)
+				continue
+			}
+
+			// Parse text input
+			input = strings.ToLower(input[:1])
+			switch input {
+			case "d": // Default
+				fmt.Println("Using default setting")
+				a.CullMode = def.CullMode
+				goto prompt10
+			case "b": // Back
+				goto prompt8
+			}
+
+			// Parse input
+			inputInt, err := strconv.ParseUint(input, 10, 0)
+			if err != nil {
+				if strings.HasSuffix(err.Error(), "invalid syntax") { // Bad input
+					continue
+				}
+				// Genuine error
+				log.Println("Error parsing response to integer prompt from user:", err)
+				enterToExit(false)
+			}
+			if inputInt <= 2 {
+				a.CullMode = uint8(inputInt)
+				break
+			}
 		}
 
 		// Handle option values
-		a.CullMode = uint8(tempCullMode)
 		switch a.CullMode {
 		case 0: // Set aside
 			fmt.Println("Culled demos will be set aside")
