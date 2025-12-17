@@ -67,7 +67,7 @@ const DateMajorDir = "datemajordir"
 const KeepPrefix = "keepprefix"
 const RenameMap = "renamemap"
 const RenameDuration = "renameduration"
-const SearchDirs = "searchdirs"   // TODO
+const SearchDirs = "searchdirs"
 const Multithread = "multithread" // TODO
 const CreateShortcut = "createshortcut"
 const LaunchTF2 = "launchtf2"
@@ -187,7 +187,6 @@ func parseIntPrompt(prompt string, max uint64, def uint16) (uint16, bool) {
 		if inputInt <= max {
 			return uint16(inputInt), false
 		}
-
 	}
 }
 
@@ -634,6 +633,9 @@ func CreateConfiguredShortcut(args Arguments) {
 			for j := range argsValues.Field(i).Len() {
 				argsString += fmt.Sprintf("%s ", argsValues.Field(i).Index(j))
 			}
+		default:
+			log.Println("Error getting arguments for shortcut", err)
+			util.EnterToExit(false)
 		}
 	}
 
@@ -721,13 +723,15 @@ func GetArgs() Arguments {
 	if tempCullMode <= 2 { // TODO: if greater than 2?
 		a.CullMode = uint8(tempCullMode)
 	}
-	switch a.CullMode {
-	case 0: // Set aside
-		fmt.Println("Culled demos will be set aside")
-	case 1: // Two-stage delete
-		fmt.Println("Culled demos will be set aside and deleted on future Demo Ark runs")
-	case 2: // Simple delete
-		fmt.Println("Culled demos will be deleted")
+	if cmdArgs[CullMode] {
+		switch a.CullMode {
+		case 0: // Set aside
+			fmt.Println("Culled demos will be set aside")
+		case 1: // Two-stage delete
+			fmt.Println("Culled demos will be set aside and deleted on future Demo Ark runs")
+		case 2: // Simple delete
+			fmt.Println("Culled demos will be deleted")
+		}
 	}
 
 	// Get CullBelow int

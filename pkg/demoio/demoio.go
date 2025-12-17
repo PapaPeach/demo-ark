@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -340,8 +341,92 @@ func GetGameType(demo *Demo, showConVars bool) {
 	demo.GameType = 0
 }
 
-/* Returns a list of .dem files in the current directory */
 func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
+	// Filter list to only have .dem files
+	var demos []Demo
+	processFile := func(path string, file fs.DirEntry) {
+		// Skip non-demo files
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".dem") {
+			return
+		}
+
+		// Skip ignored words
+		for _, ignoreWord := range ignoreWords {
+			if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
+				return
+			}
+		}
+
+		// Get header for map name and duration
+		f, err := os.Open(path)
+		if err != nil {
+			fmt.Printf("Error opening %v: %v\n", path, err)
+		}
+		defer f.Close()
+
+		header := parser.ReadHeader(f)
+
+		fileInfo, err := f.Stat()
+		if err != nil {
+			fmt.Printf("Error getting info on %v: %v", path, err)
+		}
+		demo := Demo{Name: path, NewName: file.Name(), Map: header.MapName, DateTime: fileInfo.ModTime(), Duration: header.PlaybackTime, GameType: 0}
+		demos = append(demos, demo)
+	}
+
+	if searchDirs {
+		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
+			if err != nil {
+				fmt.Printf("Error reading %v: %v\n", path, err)
+				return nil
+			}
+
+			// Skip already sorted directories
+			if file.IsDir() {
+				// demos_YYYY
+				var year int
+				sorted, _ := fmt.Sscanf(file.Name(), "demos_%d", &year)
+				if sorted != 0 {
+					return fs.SkipDir
+				}
+
+				// Skip known demos_[known sorted]
+				if len(file.Name()) >= len("demos_mvm") {
+					suffix := file.Name()[6:] // demos_[suffix]
+					if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
+						return fs.SkipDir
+					}
+				}
+			}
+
+			processFile(path, file)
+			return nil
+		})
+	} else {
+		// Get list of files in current directory
+		dir, err := os.Open(".")
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		files, err := dir.ReadDir(0)
+		if err != nil {
+			log.Println(err)
+			os.Exit(1)
+		}
+		defer dir.Close()
+
+		// Filter list to contain only demos
+		for _, file := range files {
+			processFile(file.Name(), file)
+		}
+	}
+
+	return demos
+}
+
+/* Returns a list of .dem files in the current directory */
+func GetDemosOld(searchDirs bool, ignoreWords []string) []Demo {
 	// Get list of files in current directory
 	directory, err := os.Open(".")
 	if err != nil {
