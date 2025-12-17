@@ -5,6 +5,7 @@ import (
 	"demo-ark/demoark/internal/util"
 	"demo-ark/demoark/pkg/demoio"
 	"fmt"
+	"os"
 )
 
 type Demo = demoio.Demo
@@ -45,6 +46,16 @@ func main() {
 		demoListCount = len(demoList)
 		fmt.Printf("Scanning %d demos...\n", demoListCount)
 	}
+
+	// Get events
+	var eventTxts map[string][]string
+	var culledEventTxts []string
+	eventTxts, culledEventTxts = demoio.GetEventTxts(args.SearchDirs, args.IgnoreWords)
+	fmt.Println("_event.txts:", eventTxts)
+	fmt.Println("culled event txts:", culledEventTxts)
+	os.Exit(0)
+
+	//var eventJsons []string
 
 	// Cull short demos prior to parsing more intensive information from demos
 	var culledDemos []Demo

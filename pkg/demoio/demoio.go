@@ -374,7 +374,7 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 		demos = append(demos, demo)
 	}
 
-	if searchDirs {
+	if searchDirs { // Search subdirectories
 		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
 			if err != nil {
 				fmt.Printf("Error reading %v: %v\n", path, err)
@@ -402,7 +402,7 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 			processFile(path, file)
 			return nil
 		})
-	} else {
+	} else { // Just search current directory
 		// Get list of files in current directory
 		dir, err := os.Open(".")
 		if err != nil {
@@ -420,49 +420,6 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 		for _, file := range files {
 			processFile(file.Name(), file)
 		}
-	}
-
-	return demos
-}
-
-/* Returns a list of .dem files in the current directory */
-func GetDemosOld(searchDirs bool, ignoreWords []string) []Demo {
-	// Get list of files in current directory
-	directory, err := os.Open(".")
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-	files, err := directory.Readdir(0)
-	if err != nil {
-		log.Println(err)
-		os.Exit(1)
-	}
-	defer directory.Close()
-
-	// Filter list to only have .dem files
-	var demos []Demo
-	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".dem") {
-			// Skip ignored words
-			for _, ignoreWord := range ignoreWords {
-				if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
-					goto ignored
-				}
-			}
-
-			// Get header for map name and duration
-			f, err := os.Open(file.Name())
-			if err != nil {
-				fmt.Printf("Error opening %v: %v\n", file.Name(), err)
-			}
-			header := parser.ReadHeader(f)
-
-			demo := Demo{Name: file.Name(), NewName: file.Name(), Map: header.MapName, DateTime: file.ModTime(), Duration: header.PlaybackTime, GameType: 0}
-			demos = append(demos, demo)
-			f.Close()
-		}
-	ignored:
 	}
 
 	return demos
