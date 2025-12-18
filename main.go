@@ -66,7 +66,7 @@ func main() {
 
 		// Get new names
 		if args.RenameMap || args.RenameDuration {
-			timeFormat := "15-04-05"
+			timeFormat := "2006-01-02_15-04-05"
 			demoio.GetNewName(&demoList[i], timeFormat, args.KeepPrefix, args.RenameMap, args.RenameDuration)
 		}
 
