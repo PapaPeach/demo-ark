@@ -59,7 +59,7 @@ var def = Arguments{
 	IgnoreWords:    []string{"ignore"},
 }
 
-/* Keywords for command line arguments */
+/* Keywords for command line arguments. */
 const Silent = "silent"
 const SortYear = "sortyear"
 const SortGameType = "sortgametype"
@@ -79,7 +79,7 @@ const CullGameTypes = "cullgametypes"
 const Snipe = "snipe"
 const IgnoreWords = "ignorewords"
 
-/* Parses boolean arguments and returns the boolean value */
+/* Parses boolean arguments and returns the boolean value. */
 func parseBoolArg(args []string, keyword string, def bool, message string) (bool, bool) {
 	for _, arg := range args {
 		// Locate keyword=...
@@ -105,7 +105,7 @@ func parseBoolArg(args []string, keyword string, def bool, message string) (bool
 	return def, false
 }
 
-/* Parses integer arguments and returns the integer value */
+/* Parses integer arguments and returns the integer value. */
 func parseIntArg(args []string, keyword string, def uint16) (uint16, bool) {
 	for _, arg := range args {
 		// Locate keyword=...
@@ -123,7 +123,7 @@ func parseIntArg(args []string, keyword string, def uint16) (uint16, bool) {
 	return def, false
 }
 
-/* Parses the boolean value from a user response to a given prompt */
+/* Parses the boolean value from a user response to a given prompt. */
 func parseBoolPrompt(prompt string, message string, def bool) (bool, bool) {
 	for {
 		// Prompt user
@@ -155,7 +155,7 @@ func parseBoolPrompt(prompt string, message string, def bool) (bool, bool) {
 	}
 }
 
-/* Parse the integer value from a user response to a given prompt */
+/* Parse the integer value from a user response to a given prompt. */
 func parseIntPrompt(prompt string, max uint64, def uint16) (uint16, bool) {
 	for {
 		// Prompt user
@@ -190,7 +190,7 @@ func parseIntPrompt(prompt string, max uint64, def uint16) (uint16, bool) {
 	}
 }
 
-/* Prompts user for options not set by command line arguments */
+/* Prompts user for options not set by command line arguments. */
 func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	defer fmt.Println()
 prompt0:
@@ -561,7 +561,7 @@ prompt16:
 	}
 }
 
-/* Launches TF2 via Steam api to maintain user's launch options */
+/* Launches TF2 via Steam api to maintain user's launch options. */
 func LaunchGame() {
 	// Get correct launch command for given OS
 	url := "steam://rungameid/440"
@@ -586,7 +586,7 @@ func LaunchGame() {
 	}
 }
 
-/* Creates a shortcut to run the program with the currently applied options */
+/* Creates a shortcut to run the program with the currently applied options. */
 func CreateConfiguredShortcut(args Arguments) {
 	// Get filepath of program
 	programPath, err := os.Executable()
@@ -688,7 +688,7 @@ func CreateConfiguredShortcut(args Arguments) {
 	}
 }
 
-/* Gets argument values */
+/* Gets argument values. */
 func GetArgs() Arguments {
 
 	// Convert args to lower case
@@ -720,8 +720,12 @@ func GetArgs() Arguments {
 	// Get CullMode int
 	var tempCullMode uint16
 	tempCullMode, cmdArgs[CullMode] = parseIntArg(args, CullMode, uint16(a.CullMode))
-	if tempCullMode <= 2 { // TODO: if greater than 2?
+	// Enforce bounds
+	if tempCullMode <= 2 {
 		a.CullMode = uint8(tempCullMode)
+	} else { // Above upper bound
+		log.Println("Invalid CullMode value. Allowed range: 0 to 2.")
+		util.EnterToExit(false)
 	}
 	if cmdArgs[CullMode] {
 		switch a.CullMode {
@@ -739,7 +743,7 @@ func GetArgs() Arguments {
 	if a.CullBelow != 0 && cmdArgs[CullBelow] {
 		// Don't allow culling more than 5 minute demos
 		if a.CullBelow > 300 {
-			log.Printf("Invalid CullBelow value. Cannot cull demos longer than 5 minutes.\n")
+			log.Println("Invalid CullBelow value. Cannot cull demos longer than 5 minutes.")
 			util.EnterToExit(false)
 		}
 		fmt.Printf("Culling demos shorter than: %d seconds\n", a.CullBelow)
@@ -776,8 +780,12 @@ func GetArgs() Arguments {
 	// Get ZipOlderThan int
 	var tempZipOlderThan uint16
 	tempZipOlderThan, cmdArgs[ZipOlderThan] = parseIntArg(args, ZipOlderThan, uint16(a.ZipOlderThan))
-	if tempZipOlderThan <= 255 { // TODO: If greater than 255?
+	// Enforce bounds
+	if tempZipOlderThan <= 255 {
 		a.ZipOlderThan = uint8(tempZipOlderThan)
+	} else { // Above upper bound
+		log.Println("Invalid ZipOlderThan value. Allowed range: 0 to 255.")
+		util.EnterToExit(false)
 	}
 	if a.ZipOlderThan != 0 && cmdArgs[ZipOlderThan] {
 		fmt.Printf("Zipping demos older than: %d years\n", a.ZipOlderThan)

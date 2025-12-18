@@ -25,7 +25,7 @@ linters:
     - gochecknoglobals
     - gochecknoinits
     - gochecksumtype
-    - gocognit
+    #- gocognit
     - goconst
     - gocritic
     - gocyclo

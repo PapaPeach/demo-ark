@@ -12,7 +12,45 @@ import (
 	"strings"
 )
 
-/* Get _event.txt files */
+/* Walker function for searching directories and processing files appropriately. */
+func eventWalker(ignoreWords []string, processFile func(path string, file fs.DirEntry)) {
+	filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
+		if err != nil {
+			fmt.Printf("Error reading %v: %v\n", path, err)
+			return nil
+		}
+
+		if file.IsDir() {
+			// Skip directories containing ignored words
+			for _, ignoreWord := range ignoreWords {
+				if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
+					return fs.SkipDir
+				}
+			}
+
+			// Skip already sorted directories
+			// demos_YYYY
+			var year int
+			sorted, _ := fmt.Sscanf(file.Name(), "demos_%d", &year)
+			if sorted != 0 {
+				return fs.SkipDir
+			}
+
+			// Skip known demos_[known sorted]
+			if len(file.Name()) >= len("demos_mvm") {
+				suffix := file.Name()[6:] // demos_[suffix]
+				if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
+					return fs.SkipDir
+				}
+			}
+		}
+
+		processFile(path, file)
+		return nil
+	})
+}
+
+/* Get _event.txt files and associated demos. */
 func GetEventTxts(searchDirs bool, ignoreWords []string) (map[string][]string, []string) {
 	// Filter list to only have _events.txt files
 	eventTxts := make(map[string][]string)
@@ -67,40 +105,7 @@ func GetEventTxts(searchDirs bool, ignoreWords []string) (map[string][]string, [
 
 	// Search subdirectories
 	if searchDirs {
-		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
-			if err != nil {
-				fmt.Printf("Error reading %v: %v\n", path, err)
-				return nil
-			}
-
-			if file.IsDir() {
-				// Skip directories containing ignored words
-				for _, ignoreWord := range ignoreWords {
-					if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
-						return fs.SkipDir
-					}
-				}
-
-				// Skip already sorted directories
-				// demos_YYYY
-				var year int
-				sorted, _ := fmt.Sscanf(file.Name(), "demos_%d", &year)
-				if sorted != 0 {
-					return fs.SkipDir
-				}
-
-				// Skip known demos_[known sorted]
-				if len(file.Name()) >= len("demos_mvm") {
-					suffix := file.Name()[6:] // demos_[suffix]
-					if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
-						return fs.SkipDir
-					}
-				}
-			}
-
-			processFile(path, file)
-			return nil
-		})
+		eventWalker(ignoreWords, processFile)
 	} else { // Just search current directory
 		// Get list of files in current directory
 		dir, err := os.Open(".")
@@ -124,7 +129,7 @@ func GetEventTxts(searchDirs bool, ignoreWords []string) (map[string][]string, [
 	return eventTxts, culledEventTxts
 }
 
-/* Get event jsons associated with demos */
+/* Get event jsons associated with demos. */
 func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 	// Filter list to only have .json files
 	var eventJsons []string
@@ -150,40 +155,7 @@ func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 
 	// Search subdirectories
 	if searchDirs {
-		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
-			if err != nil {
-				fmt.Printf("Error reading %v: %v\n", path, err)
-				return nil
-			}
-
-			if file.IsDir() {
-				// Skip directories containing ignored words
-				for _, ignoreWord := range ignoreWords {
-					if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
-						return fs.SkipDir
-					}
-				}
-
-				// Skip already sorted directories
-				// demos_YYYY
-				var year int
-				sorted, _ := fmt.Sscanf(file.Name(), "demos_%d", &year)
-				if sorted != 0 {
-					return fs.SkipDir
-				}
-
-				// Skip known demos_[known sorted]
-				if len(file.Name()) >= len("demos_mvm") {
-					suffix := file.Name()[6:] // demos_[suffix]
-					if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
-						return fs.SkipDir
-					}
-				}
-			}
-
-			processFile(path, file)
-			return nil
-		})
+		eventWalker(ignoreWords, processFile)
 	} else { // Just search current directory
 		// Get list of files in current directory
 		dir, err := os.Open(".")
@@ -207,6 +179,7 @@ func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 	return eventJsons, culledEventJsons
 }
 
+/* Updated _events.txt files with new demo names and cull empty _events.txt. */
 func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, demos []Demo, cullMode uint8) {
 	// Check if a demo is in an _events.txt file
 	for eventTxt, eventDemos := range eventTxts {
@@ -267,7 +240,7 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 
 	// Create the culled directory
 	if cullMode < 2 {
-		// Make directory to move demo to
+		// Make directory to move events to
 		err := os.MkdirAll(culledDir, os.ModePerm)
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			log.Println(err)
@@ -287,13 +260,15 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 		}
 
 		// Move event to culled directory
-		err := os.Rename(eventTxt, filepath.Join(culledDir, eventTxt))
+		newName := strings.ReplaceAll(eventTxt, string(filepath.Separator), ".")
+		err := os.Rename(eventTxt, filepath.Join(culledDir, newName))
 		if err != nil {
 			log.Println(err)
 		}
 	}
 }
 
+/* Update .json event files and cull empty or demoless .json files. */
 func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []Demo, cullMode uint8) {
 	// Search for json corresponding to demos
 	for _, eventJson := range eventJsons {
@@ -329,7 +304,7 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 
 	// Create the culled directory
 	if cullMode < 2 {
-		// Make directory to move demo to
+		// Make directory to move events to
 		err := os.MkdirAll(culledDir, os.ModePerm)
 		if err != nil && !errors.Is(err, os.ErrExist) {
 			log.Println(err)
@@ -349,7 +324,8 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 		}
 
 		// Move event to culled directory
-		err := os.Rename(eventJson, filepath.Join(culledDir, eventJson))
+		newName := strings.ReplaceAll(eventJson, string(filepath.Separator), ".")
+		err := os.Rename(eventJson, filepath.Join(culledDir, newName))
 		if err != nil {
 			log.Println(err)
 		}

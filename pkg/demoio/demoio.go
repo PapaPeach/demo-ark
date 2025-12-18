@@ -27,7 +27,7 @@ type Demo struct {
 	GameType int8      // 0: Tournament | 1: Casual | 2: MvM
 }
 
-/* Zips a folder of demos from */
+/* Zips a folder of demos from. */
 func ZipDir(dirName string) {
 	fmt.Printf("Zipping %s...\n", dirName)
 
@@ -166,7 +166,7 @@ func ZipOldDemos(zipOlderThan uint8) {
 	}
 }
 
-/* Culls demos shorter than a specified minimum length */
+/* Culls demos shorter than a specified minimum length. */
 func CullShortDemos(demos *[]Demo, min uint16) []Demo {
 	var cull []Demo
 	keep := (*demos)[:0]
@@ -187,7 +187,7 @@ func CullShortDemos(demos *[]Demo, min uint16) []Demo {
 	return cull
 }
 
-/* Culls demos of a specified game type based on a key string */
+/* Culls demos of a specified game type based on a key string. */
 func CullGameTypes(demos *[]Demo, key string) []Demo {
 	// Parse key
 	cullTournament := false
@@ -236,7 +236,7 @@ func CullGameTypes(demos *[]Demo, key string) []Demo {
 	return cull
 }
 
-/* Generates a time format string based on arguments */
+/* Generates a time format string based on arguments. */
 func GetTimeFormat(twelveHourTime bool) string {
 	// Format time
 	if twelveHourTime {
@@ -245,7 +245,7 @@ func GetTimeFormat(twelveHourTime bool) string {
 	return "15-04-05"
 }
 
-/* Gets the date from a demo's name */
+/* Gets the date from a demo's name. */
 func GetDateTime(demo Demo) time.Time {
 	// Search for valid date my locating year via: prefix[20]YY-MM-DD_HH-MM-SS
 	skipped := 0
@@ -266,7 +266,7 @@ func GetDateTime(demo Demo) time.Time {
 	return demo.DateTime
 }
 
-/* Generates new names for demos to according to the arguments provided */
+/* Generates new names for demos to according to the arguments provided. */
 func GetNewName(demo *Demo, dateTimeFormat string, keepPrefix bool, renameMap bool, renameDuration bool) {
 	// Get prefix
 	var wishName string
@@ -299,7 +299,7 @@ func GetNewName(demo *Demo, dateTimeFormat string, keepPrefix bool, renameMap bo
 	demo.NewName = wishName + ".dem"
 }
 
-/* Get game type of demo (0: Tournament | 1: Casual | 2: MvM) */
+/* Get game type of demo (0: Tournament | 1: Casual | 2: MvM). */
 func GetGameType(demo *Demo, showConVars bool) {
 	// Determine if MvM via map prefix in header
 	if strings.HasPrefix(demo.Map, "mvm_") {
@@ -449,7 +449,7 @@ func SnipeDemo(filename string) []Demo {
 	return demos
 }
 
-/* Checks if conVar exists with the desired value in a array conVars */
+/* Checks if conVar exists with the desired value in a array conVars. */
 func CheckConVar(conVars []string, wishStr string, wishVal string) bool {
 	if i := slices.Index(conVars, wishStr); i != -1 && conVars[i+1] == wishVal {
 		return true
@@ -457,7 +457,7 @@ func CheckConVar(conVars []string, wishStr string, wishVal string) bool {
 	return false
 }
 
-/* Moves files in a list of files to a directory */
+/* Moves files in a list of files to a directory. */
 func SortDemos(demoList *[]Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, showConVars bool, cullMode uint8) {
 	demos := *demoList
 	// Handle length accordingly
