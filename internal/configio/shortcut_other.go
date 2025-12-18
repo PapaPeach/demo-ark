@@ -93,7 +93,7 @@ func CreateConfiguredShortcut(args Arguments) {
 	}
 
 	// Create shortcut
-	shortcutPath := filepath.Join(".", "DemoArk Shortcut")
+	shortcutPath := filepath.Join(".", "Demo Ark")
 	switch runtime.GOOS {
 	case "linux": // Create .desktop shortcut
 		fmt.Println("Creating configured Linux shortcut...")
@@ -112,7 +112,7 @@ func CreateConfiguredShortcut(args Arguments) {
 		sc.WriteString("Comment=Demo archiver with user configured options\n")
 		sc.WriteString("Icon=" + iconPath + "\n")
 		sc.WriteString("Path=" + path + "\n")
-		sc.WriteString("Exec=\"" + programPath + "\"" + argsString + "\n")
+		sc.WriteString("Exec=\"" + programPath + "\" " + argsString + "\n")
 
 		sc.WriteString("Terminal=false\n")
 		sc.WriteString("Categories=Games;Utility;Application;\n")

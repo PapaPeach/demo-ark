@@ -91,7 +91,7 @@ func CreateConfiguredShortcut(args Arguments) {
 	}
 
 	// Create shortcut
-	shortcutPath := filepath.Join(".", "DemoArk Shortcut")
+	shortcutPath := filepath.Join(".", "Demo Ark")
 	if runtime.GOOS == "windows" { // Create .lnk shortcut
 		fmt.Println("Creating configured Windows shortcut...")
 		sc := shortcut.Shortcut{
