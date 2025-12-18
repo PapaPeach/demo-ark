@@ -5,7 +5,6 @@ import (
 	"demo-ark/demoark/internal/util"
 	"demo-ark/demoark/pkg/demoio"
 	"fmt"
-	"os"
 )
 
 type Demo = demoio.Demo
@@ -47,15 +46,16 @@ func main() {
 		fmt.Printf("Scanning %d demos...\n", demoListCount)
 	}
 
-	// Get events
-	var eventTxts map[string][]string
-	var culledEventTxts []string
-	eventTxts, culledEventTxts = demoio.GetEventTxts(args.SearchDirs, args.IgnoreWords)
-	fmt.Println("_event.txts:", eventTxts)
-	fmt.Println("culled event txts:", culledEventTxts)
-	os.Exit(0)
+	// Get _events.txt
+	// TODO: Allow sniping events?
+	eventTxts, culledEventTxts := demoio.GetEventTxts(args.SearchDirs, args.IgnoreWords)
 
-	//var eventJsons []string
+	// TODO: Get demo.json events
+	var eventJsons []string
+	var culledEventJsons []string
+	eventJsons, culledEventJsons = demoio.GetEventJsons(args.SearchDirs, args.IgnoreWords)
+	fmt.Println("event jsons:", eventJsons)
+	fmt.Println("culled event jsons:", culledEventJsons)
 
 	// Cull short demos prior to parsing more intensive information from demos
 	var culledDemos []Demo
@@ -86,7 +86,12 @@ func main() {
 	}
 
 	// Sort and move demos
-	demoio.SortDemos(demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.ShowConVars, args.CullMode)
+	demoio.SortDemos(&demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.ShowConVars, args.CullMode)
+
+	// Update _events.txt
+	demoio.UpdateEventTxts(eventTxts, demoList, culledEventTxts, args.CullMode)
+
+	// TODO: Update demo.json events
 
 	// Zip folders older than specified number of years
 	if args.ZipOlderThan > 0 {

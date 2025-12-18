@@ -20,6 +20,7 @@ import (
 type Demo struct {
 	Name     string    // Current file name of demo
 	NewName  string    // Desired rename for demo
+	WishDir  string    // Desired directory for demo after sorting
 	Map      string    // Map demo was recorded on
 	DateTime time.Time // Date and time demo was recorded / edited
 	Duration float32   // Duration of demo in seconds
@@ -455,9 +456,9 @@ func CheckConVar(conVars []string, wishStr string, wishVal string) bool {
 	return false
 }
 
-// TODO: Update _events.json
 /* Moves files in a list of files to a directory */
-func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, showConVars bool, cullMode uint8) {
+func SortDemos(demoList *[]Demo, culled []Demo, sortYear bool, sortGameType bool, dateMajorDir bool, showConVars bool, cullMode uint8) {
+	demos := *demoList
 	// Handle length accordingly
 	switch length := len(demos); length {
 	case 0: // Skip to culling if no demos to sort
@@ -501,22 +502,22 @@ func SortDemos(demos []Demo, culled []Demo, sortYear bool, sortGameType bool, da
 			}
 
 			// Get name of directory to move demo to
-			wishDir := "demos_"
+			demos[i].WishDir = "demos_"
 			if dateMajorDir { // demos_2025/tournament/demo.dem
-				wishDir += filepath.Join(year, gameType)
+				demos[i].WishDir += filepath.Join(year, gameType)
 			} else { // demos_tournament/2025/demo.dem
-				wishDir += filepath.Join(gameType, year)
+				demos[i].WishDir += filepath.Join(gameType, year)
 			}
 
 			// Make directory to move demo to
-			err := os.MkdirAll(wishDir, os.ModePerm)
+			err := os.MkdirAll(demos[i].WishDir, os.ModePerm)
 			if err != nil && !errors.Is(err, os.ErrExist) {
 				log.Println(err)
 				os.Exit(1)
 			}
 
 			// Move demo to directory and rename
-			err = os.Rename(demos[i].Name, filepath.Join(wishDir, demos[i].NewName))
+			err = os.Rename(demos[i].Name, filepath.Join(demos[i].WishDir, demos[i].NewName))
 			if err != nil {
 				log.Println(err)
 			}
