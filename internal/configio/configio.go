@@ -427,7 +427,7 @@ prompt11:
 	prompted := false
 	for !cmdArgs[IgnoreWords] {
 		if !prompted {
-			fmt.Print("\n(11 / 17) Enter a word that should tell the program to ignore demos containing specified word.\nPress [Enter] with no input to skip / [!Default] / [!Back]: ")
+			fmt.Print("\n(11 / 17) Enter a word that should tell the program to ignore demos containing specified word.\nPress [Enter] with no input to skip / [D]efault / [B]ack: ")
 		} else {
 			fmt.Print("Press [Enter] with no input to continue: ")
 		}
@@ -446,15 +446,21 @@ prompt11:
 		// Handle Default or Back command
 		if !prompted {
 			switch strings.ToLower(input) {
-			case "!default":
+			case "d":
 				fmt.Println("Using default value")
 				a.IgnoreWords = def.IgnoreWords
 				goto prompt12
-			case "!back":
+			case "b":
 				goto prompt10
 			}
 
 			prompted = true
+		}
+
+		// Enforce minimum length
+		if len(input) < 2 {
+			fmt.Println("Ignored words must be at least 2 letters long")
+			continue
 		}
 
 		a.IgnoreWords = append(a.IgnoreWords, input)
@@ -537,7 +543,7 @@ prompt16:
 	// Get Snipe string
 	for !cmdArgs[Snipe] {
 		fmt.Println()
-		fmt.Print("(17 / 17) Enter exact filename to selectively execute on.\nPress [Enter] with no input to skip / [!Default] / [!Back]: ")
+		fmt.Print("(17 / 17) Enter exact filename to selectively execute on.\nPress [Enter] with no input to skip / [D]efault / [B]ack: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil && !strings.HasSuffix(err.Error(), "newline") {
@@ -547,12 +553,18 @@ prompt16:
 
 		// Handle Default or Back command
 		switch strings.ToLower(input) {
-		case "!default":
+		case "d":
 			fmt.Println("Using default value")
 			a.Snipe = def.Snipe
 			return
-		case "!back":
+		case "b":
 			goto prompt16
+		}
+
+		// Enforce minimum length
+		if len(input) < 2 {
+			fmt.Println("Filenames must be at least 2 letters long")
+			continue
 		}
 
 		a.Snipe = input
@@ -667,9 +679,12 @@ func CreateConfiguredShortcut(args Arguments) {
 	}
 
 	// Create shortcut
-	if runtime.GOOS == "windows" {
+	shortcutPath := filepath.Join(".", "DemoArk Shortcut")
+	switch runtime.GOOS {
+	case "windows": // Create .lnk shortcut
+		fmt.Println("Creating configured Windows shortcut...")
 		sc := shortcut.Shortcut{
-			ShortcutPath:     "./DemoArk Shortcut.lnk",
+			ShortcutPath:     shortcutPath + ".lnk",
 			Target:           programPath,
 			IconLocation:     iconPath,
 			Arguments:        argsString,
@@ -680,10 +695,28 @@ func CreateConfiguredShortcut(args Arguments) {
 		}
 		err = shortcut.Create(sc)
 		if err != nil {
-			log.Println("Error creating desktop shortcut:", err)
+			log.Println("Error creating Windows shortcut:", err)
 			util.EnterToExit(false)
 		}
-	} else {
+	case "linux": // Create .desktop shortcut
+		fmt.Println("Creating configured Linux shortcut...")
+		sc, err := os.Create(shortcutPath + ".desktop")
+		if err != nil {
+			log.Println("Error creating Linux shortcut:", err)
+		}
+		defer sc.Close()
+
+		// Write contents of .desktop file
+		sc.WriteString("[Desktop Entry]\n")
+		sc.WriteString("Encoding=UTF-8\n")
+		sc.WriteString("Version=1.0\n")
+		sc.WriteString("Type=Application\n")
+		sc.WriteString("Terminal=false\n")
+		sc.WriteString("Exec=" + programPath + "\n")
+		sc.WriteString("Name=DemoArk\n")
+		sc.WriteString("Icon=" + iconPath + "\n")
+	case "darwin": // Mac: Just print path for copy + paste
+		fmt.Println("Creating copy+paste-able Mac path...")
 		fmt.Printf("%s %s\nPath to icon: %s\n", programPath, argsString, iconPath)
 	}
 }

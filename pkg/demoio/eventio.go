@@ -227,7 +227,7 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 			os.Exit(1)
 		}
 
-		// Remove temp file?
+		// TODO: Remove temp file?
 		os.Remove(tempFile.Name())
 	}
 

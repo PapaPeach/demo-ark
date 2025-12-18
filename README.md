@@ -4,9 +4,9 @@ I wrote this because I have always been irritated by the shortcomings of TF2's D
 
 # Automated Running
 To simplify keeping your demos organized, Demo Ark is built to enable various ways to automate running. The simplest is built directly into the program. Demo Ark can create a shortcut that will run with your desired options and can even launch the game while it runs. To enable this:
-1. Place **demoark.exe** where TF2 records demos to, usually: `Team Fortress 2\tf\demos`.
+1. Place **demoark.exe** where TF2 records demos to (this can be configured in-game with `ds_dir ...`).
 2. Run **demoark.exe** and select the options for how you'd like to organize your demos.
-3. When asked if you'd like to create a shortcut (prompt 15 / 18), select **Yes**.
+3. When asked if you'd like to create a shortcut (prompt 14 / 17), select **Yes**.
 4. When asked if you'd like the shortcut to launch TF2 alongside Demo Ark, select **Yes**.
 5. Answer the remaining prompts. When finished, Demo Ark will create a shortcut with the desired settings that you can place wherever you'd like.
 
@@ -30,7 +30,7 @@ For example: `./demo-ark silent=true sortYear=1 ZipOlderThan=3 SNIPE=the_med.dem
 | KeepPrefix     |   true (1) / false (0)   |     true      | Rename options won't overwrite a detected ds_prefix                                                                                                                                                              |
 | SearchDirs     |   true (1) / false (0)   |     false     | Search subdirectories within the current directory                                                                                                                                                               |
 | Multithread    |   true (1) / false (0)   |     true      | Allow the use of multiple cores / threads                                                                                                                                                                        |
-| CreateShortcut |   true (1) / false (0)   |     false     | **Windows:** Create a shortcut to run program with the selected options<br>**Non-Windows:** Print a copyable path to the program with selected options                                                           |
+| CreateShortcut |   true (1) / false (0)   |     false     | **Windows / Linux:** Create a shortcut to run program with the selected options<br>**Mac:** Print a copyable path to the program with selected options                                                           |
 | LaunchTF2      |   true (1) / false (0)   |     false     | Launch TF2 while program runs                                                                                                                                                                                    |
 | CullMode       |          0 - 2           |       0       | **0:** Set aside culled demos to "culled" folder<br>**1:** Delete previously set aside demos, then set aside next batch of culled demos to be deleted on future Demo Ark runs<br>**2:** Delete demos immediately |
 | CullGameTypes  |         t, c, m          |      ""       | Cull demos of a specific game types (won't allow culling of all game types)<br> Example: `cullgametypes=cm` Will cull **C**asual and **M**vM                                                                     |
@@ -50,13 +50,13 @@ I can't add one-off customization options for individuals, if I recieve enough f
 | TwelveHourTime | Removed, too finicky | **True:** 12hr<br>**False:** 24hr                                          |
 
 # How's It Work?
-Demos pre-date the ability to conveniently share videos, so instead they are essentially instructions for an offline server to replay the exact game as the original live game you recorded. That includes server settings which can be used to differentiate between the settings used for Casual, Tournament, and MvM servers.  
+Demos pre-date the ability to conveniently share videos, so instead they are essentially instructions for an offline server to replay the game exactly as the original live match you recorded. That includes server settings which can be used to differentiate between the settings used for Casual, Tournament, and MvM servers.  
 The rest of the program is simply parsing the bit-buffered contents of demos and managing selected options.
 
 # Is This A Virus?
 ### Nope.
 Your anti-virus will likely warn you about running executables made by unknown creators, which is its job. If you know how, I invite you to review my code, build it from source, and even provide feedback.  
-If the project takes off I can look into getting the project officially approved my Microsoft so Windows Security won't show the scary warning. Though to maintain Microsoft recognition I'd have to do it for every update or pay $300-$700 annually for Microsoft to keep track of it automatically. This also wouldn't apply to third-party anti-virus providers.
+If the project takes off I can look into getting Demo Ark officially approved by Microsoft so Windows Security won't show this warning. Though to maintain Microsoft recognition I'd have to resubmit Demo Ark every update and wait for their approval, or pay $300-$700 annually for Microsoft to guarantee my program would be reviewed within 24 hours of submission. This also wouldn't apply to third-party anti-virus providers.
 
 # Thanks
 **[NeKzor's Portal 2 Demo Documentation](https://dem.nekz.me/)** - The most comprehensive documentation on demos I've ever seen, for any Source game.  
