@@ -375,7 +375,8 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 		demos = append(demos, demo)
 	}
 
-	if searchDirs { // Search subdirectories
+	// Search subdirectories
+	if searchDirs {
 		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
 			if err != nil {
 				fmt.Printf("Error reading %v: %v\n", path, err)

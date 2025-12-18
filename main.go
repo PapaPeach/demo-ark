@@ -50,12 +50,8 @@ func main() {
 	// TODO: Allow sniping events?
 	eventTxts, culledEventTxts := demoio.GetEventTxts(args.SearchDirs, args.IgnoreWords)
 
-	// TODO: Get demo.json events
-	var eventJsons []string
-	var culledEventJsons []string
-	eventJsons, culledEventJsons = demoio.GetEventJsons(args.SearchDirs, args.IgnoreWords)
-	fmt.Println("event jsons:", eventJsons)
-	fmt.Println("culled event jsons:", culledEventJsons)
+	// Get demo.json events
+	eventJsons, culledEventJsons := demoio.GetEventJsons(args.SearchDirs, args.IgnoreWords)
 
 	// Cull short demos prior to parsing more intensive information from demos
 	var culledDemos []Demo
@@ -89,9 +85,10 @@ func main() {
 	demoio.SortDemos(&demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.ShowConVars, args.CullMode)
 
 	// Update _events.txt
-	demoio.UpdateEventTxts(eventTxts, demoList, culledEventTxts, args.CullMode)
+	demoio.UpdateEventTxts(eventTxts, culledEventTxts, demoList, args.CullMode)
 
-	// TODO: Update demo.json events
+	// Update demo.json events
+	demoio.UpdateEventJsons(eventJsons, culledEventJsons, demoList, args.CullMode)
 
 	// Zip folders older than specified number of years
 	if args.ZipOlderThan > 0 {

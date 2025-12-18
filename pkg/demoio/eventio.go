@@ -65,17 +65,34 @@ func GetEventTxts(searchDirs bool, ignoreWords []string) (map[string][]string, [
 		}
 	}
 
-	if searchDirs { // Search subdirectories
+	// Search subdirectories
+	if searchDirs {
 		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
 			if err != nil {
 				fmt.Printf("Error reading %v: %v\n", path, err)
 				return nil
 			}
 
-			// Skip directories containing ignored words
 			if file.IsDir() {
+				// Skip directories containing ignored words
 				for _, ignoreWord := range ignoreWords {
 					if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
+						return fs.SkipDir
+					}
+				}
+
+				// Skip already sorted directories
+				// demos_YYYY
+				var year int
+				sorted, _ := fmt.Sscanf(file.Name(), "demos_%d", &year)
+				if sorted != 0 {
+					return fs.SkipDir
+				}
+
+				// Skip known demos_[known sorted]
+				if len(file.Name()) >= len("demos_mvm") {
+					suffix := file.Name()[6:] // demos_[suffix]
+					if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
 						return fs.SkipDir
 					}
 				}
@@ -131,17 +148,34 @@ func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 		eventJsons = append(eventJsons, path)
 	}
 
-	if searchDirs { // Search subdirectories
+	// Search subdirectories
+	if searchDirs {
 		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
 			if err != nil {
 				fmt.Printf("Error reading %v: %v\n", path, err)
 				return nil
 			}
 
-			// Skip directories containing ignored words
 			if file.IsDir() {
+				// Skip directories containing ignored words
 				for _, ignoreWord := range ignoreWords {
 					if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
+						return fs.SkipDir
+					}
+				}
+
+				// Skip already sorted directories
+				// demos_YYYY
+				var year int
+				sorted, _ := fmt.Sscanf(file.Name(), "demos_%d", &year)
+				if sorted != 0 {
+					return fs.SkipDir
+				}
+
+				// Skip known demos_[known sorted]
+				if len(file.Name()) >= len("demos_mvm") {
+					suffix := file.Name()[6:] // demos_[suffix]
+					if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
 						return fs.SkipDir
 					}
 				}
@@ -173,36 +207,36 @@ func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 	return eventJsons, culledEventJsons
 }
 
-func UpdateEventTxts(eventTxts map[string][]string, demos []Demo, culledEventTxts []string, cullMode uint8) {
+func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, demos []Demo, cullMode uint8) {
 	// Check if a demo is in an _events.txt file
 	for eventTxt, eventDemos := range eventTxts {
 		// Read file
 		eventFile, err := os.ReadFile(eventTxt)
 		if err != nil {
 			log.Println("Error reading event file for updating:", err)
+			os.Exit(1)
 		}
 		contents := string(eventFile)
 
 		// Look for events corresponding to demos
 		for _, demo := range demos {
 			demoTitle := strings.TrimSuffix(demo.Name, ".dem") // Name without .dem
-			fmt.Println("Searching for: ", demoTitle)
 			// If there is no event matching a demo, skip
-			targetIndex := slices.Index(eventDemos, demoTitle)
-			if targetIndex == -1 {
+			matchIndex := slices.Index(eventDemos, demoTitle)
+			if matchIndex == -1 {
 				continue
 			}
 
 			// Update _events.txt
 			newDemoTitle := strings.TrimSuffix(demo.NewName, ".dem")
-			fmt.Printf("Replacing: %s\tWith: %s\n", eventDemos[targetIndex], filepath.Join(demo.WishDir, newDemoTitle))
-			contents = strings.ReplaceAll(contents, eventDemos[targetIndex], filepath.Join(demo.WishDir, newDemoTitle))
+			contents = strings.ReplaceAll(contents, eventDemos[matchIndex], filepath.Join(demo.WishDir, newDemoTitle))
 		}
 
 		// Write updated contents to temporary file
 		tempFile, err := os.CreateTemp(filepath.Dir(eventTxt), "temp*")
 		if err != nil {
 			log.Println("Error creating temporary _events.txt file:", err)
+			os.Exit(1)
 		}
 
 		_, err = tempFile.WriteString(contents)
@@ -215,6 +249,10 @@ func UpdateEventTxts(eventTxts map[string][]string, demos []Demo, culledEventTxt
 
 		// Rename temp file to _events.txt
 		err = os.Rename(tempFile.Name(), eventTxt)
+		if err != nil {
+			log.Println("Error renaming temporary file:", err)
+			os.Exit(1)
+		}
 
 		// Remove temp file?
 		os.Remove(tempFile.Name())
@@ -239,7 +277,7 @@ func UpdateEventTxts(eventTxts map[string][]string, demos []Demo, culledEventTxt
 
 	// Cull demos
 	for _, eventTxt := range culledEventTxts {
-		// Delete culled demos
+		// Delete culled events
 		if cullMode == 2 {
 			err := os.Remove(eventTxt)
 			if err != nil {
@@ -248,8 +286,70 @@ func UpdateEventTxts(eventTxts map[string][]string, demos []Demo, culledEventTxt
 			continue
 		}
 
-		// Move demo to culled directory
+		// Move event to culled directory
 		err := os.Rename(eventTxt, filepath.Join(culledDir, eventTxt))
+		if err != nil {
+			log.Println(err)
+		}
+	}
+}
+
+func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []Demo, cullMode uint8) {
+	// Search for json corresponding to demos
+	for _, eventJson := range eventJsons {
+		foundMatch := false
+		for _, demo := range demos {
+			targetTitle := strings.Replace(demo.Name, ".dem", ".json", 1)
+			if eventJson != targetTitle {
+				continue
+			}
+
+			// Update matching json name
+			foundMatch = true
+			newName := strings.Replace(demo.NewName, ".dem", ".json", 1)
+			err := os.Rename(eventJson, filepath.Join(demo.WishDir, newName))
+			if err != nil {
+				log.Println("Error updating .json:", err)
+				os.Exit(1)
+			}
+		}
+
+		// Cull jsons with no corresponding demo
+		if !foundMatch {
+			culledEventJsons = append(culledEventJsons, eventJson)
+		}
+	}
+
+	// If there's no events to cull, skip culling
+	culledDir := "demos_culled"
+	length := len(culledEventJsons)
+	if length == 0 {
+		return
+	}
+
+	// Create the culled directory
+	if cullMode < 2 {
+		// Make directory to move demo to
+		err := os.MkdirAll(culledDir, os.ModePerm)
+		if err != nil && !errors.Is(err, os.ErrExist) {
+			log.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	// Cull demos
+	for _, eventJson := range culledEventJsons {
+		// Delete culled events
+		if cullMode == 2 {
+			err := os.Remove(eventJson)
+			if err != nil {
+				log.Println("Error deleting culled .json:", err)
+			}
+			continue
+		}
+
+		// Move event to culled directory
+		err := os.Rename(eventJson, filepath.Join(culledDir, eventJson))
 		if err != nil {
 			log.Println(err)
 		}
