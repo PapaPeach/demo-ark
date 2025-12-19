@@ -39,7 +39,12 @@ func eventWalker(ignoreWords []string, processFile func(path string, file fs.Dir
 			// Skip known demos_[known sorted]
 			if len(file.Name()) >= len("demos_mvm") {
 				suffix := file.Name()[6:] // demos_[suffix]
-				if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
+				if suffix == "culled" ||
+					suffix == "tournament" ||
+					suffix == "casual" ||
+					suffix == "community" ||
+					suffix == "mvm" ||
+					suffix == "valvecomp" {
 					return fs.SkipDir
 				}
 			}

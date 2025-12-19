@@ -27,6 +27,12 @@ type Demo struct {
 	GameType int8      // 0: Tournament | 1: Casual | 2: MvM
 }
 
+const tournament = 0
+const casual = 1
+const community = 2
+const mvm = 3
+const valvecomp = 4
+
 /* Zips a folder of demos from. */
 func ZipDir(dirName string) {
 	fmt.Printf("Zipping %s...\n", dirName)
@@ -127,7 +133,11 @@ func ZipOldDemos(zipOlderThan uint8) {
 			if year-fileYear >= int(zipOlderThan) {
 				ZipDir(filename)
 			}
-		} else if filename == "demos_tournament" || filename == "demos_casual" || filename == "demos_mvm" {
+		} else if filename == "demos_tournament" ||
+			filename == "demos_casual" ||
+			filename == "demos_community" ||
+			filename == "demos_mvm" ||
+			filename == "demos_valvecomp" {
 			// DateMajorDir=false file structure (demos_gametype/YYYY/blah.dem)
 			// Open gametype directory
 			gameTypeDir, err := os.Open(filename)
@@ -192,7 +202,9 @@ func CullGameTypes(demos *[]Demo, key string) []Demo {
 	// Parse key
 	cullTournament := false
 	cullCasual := false
+	cullCommunity := false
 	cullMvm := false
+	cullValveComp := false
 	parsed := 0
 	if strings.ContainsRune(key, 't') {
 		cullTournament = true
@@ -202,14 +214,22 @@ func CullGameTypes(demos *[]Demo, key string) []Demo {
 		cullCasual = true
 		parsed++
 	}
+	if strings.ContainsRune(key, 'q') {
+		cullCommunity = true
+		parsed++
+	}
 	if strings.ContainsRune(key, 'm') {
 		cullMvm = true
+		parsed++
+	}
+	if strings.ContainsRune(key, 'v') {
+		cullValveComp = true
 		parsed++
 	}
 
 	// Ensure key only contains usable characters
 	if parsed != len(key) {
-		log.Printf("Invalid CullGameType key. Usage: CullGameType=tcm (t = Tournament, c = Casual, m = MvM).\n")
+		log.Printf("Invalid CullGameType key. Usage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
 		os.Exit(1)
 	}
 
@@ -217,16 +237,23 @@ func CullGameTypes(demos *[]Demo, key string) []Demo {
 	var cull []Demo
 	keep := (*demos)[:0]
 	for _, demo := range *demos {
-		if cullTournament && demo.GameType == 0 { // Cull Tournament
+		switch {
+		case cullTournament && demo.GameType == tournament: // Cull Tournament
 			cull = append(cull, demo)
 			fmt.Printf("Marked demo for culling: %s\tGame Type: Tournament\n", demo.Name)
-		} else if cullCasual && demo.GameType == 1 { // Cull Casual
+		case cullCasual && demo.GameType == casual: // Cull Casual
 			cull = append(cull, demo)
 			fmt.Printf("Marked demo for culling: %s\tGame Type: Casual\n", demo.Name)
-		} else if cullMvm && demo.GameType == 2 { // Cull MvM
+		case cullCommunity && demo.GameType == community: // Cull Community
+			cull = append(cull, demo)
+			fmt.Printf("Marked demo for culling: %s\t Game Type: Community\n", demo.Name)
+		case cullMvm && demo.GameType == mvm: // Cull MvM
 			cull = append(cull, demo)
 			fmt.Printf("Marked demo for culling: %s\tGame Type: MvM\n", demo.Name)
-		} else { // Don't mark for culling
+		case cullValveComp && demo.GameType == valvecomp: // Cull Valve Comp
+			cull = append(cull, demo)
+			fmt.Printf("Marked demo for culling: %s\tGame Type: Valve Competitive\n", demo.Name)
+		default:
 			keep = append(keep, demo)
 		}
 	}
@@ -299,11 +326,11 @@ func GetNewName(demo *Demo, dateTimeFormat string, keepPrefix bool, renameMap bo
 	demo.NewName = wishName + ".dem"
 }
 
-/* Get game type of demo (0: Tournament | 1: Casual | 2: MvM). */
+/* Get game type of demo. */
 func GetGameType(demo *Demo, showConVars bool) {
 	// Determine if MvM via map prefix in header
 	if strings.HasPrefix(demo.Map, "mvm_") {
-		demo.GameType = 2
+		demo.GameType = mvm
 		return
 	}
 
@@ -328,18 +355,26 @@ func GetGameType(demo *Demo, showConVars bool) {
 
 	// Determine if casual via specific conVar values
 	for _, sc := range msg.ParsedData.SetConVar {
-		// Check if tournament 1, stopwatch 0, readymode 1, readymode_min 0
+		// Check if Casual or Valve Comp
 		if CheckConVar(sc.ConVars, "mp_tournament", "1") &&
-			CheckConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
 			CheckConVar(sc.ConVars, "mp_tournament_readymode", "1") &&
 			CheckConVar(sc.ConVars, "mp_tournament_readymode_min", "0") {
-			demo.GameType = 1
+			if CheckConVar(sc.ConVars, "mp_tournament_stopwatch", "0") &&
+				CheckConVar(sc.ConVars, "sv_vote_issue_kick_allowed", "1") { // Casual
+				demo.GameType = casual
+				return
+			} else if CheckConVar(sc.ConVars, "tf_ctf_bonus_time", "0") { // Valve comp
+				demo.GameType = valvecomp
+				return
+			}
+		} else if !CheckConVar(sc.ConVars, "mp_tournament", "1") { // Community
+			demo.GameType = community
 			return
 		}
 	}
 
 	// Assume file is tournament type if it's not the others
-	demo.GameType = 0
+	demo.GameType = tournament
 }
 
 func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
@@ -371,7 +406,7 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 		if err != nil {
 			fmt.Printf("Error getting info on %v: %v", path, err)
 		}
-		demo := Demo{Name: path, NewName: file.Name(), Map: header.MapName, DateTime: fileInfo.ModTime(), Duration: header.PlaybackTime, GameType: 0}
+		demo := Demo{Name: path, NewName: file.Name(), Map: header.MapName, DateTime: fileInfo.ModTime(), Duration: header.PlaybackTime, GameType: -1}
 		demos = append(demos, demo)
 	}
 
@@ -395,7 +430,12 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 				// Skip known demos_[known sorted]
 				if len(file.Name()) >= len("demos_mvm") {
 					suffix := file.Name()[6:] // demos_[suffix]
-					if suffix == "culled" || suffix == "tournament" || suffix == "casual" || suffix == "mvm" {
+					if suffix == "culled" ||
+						suffix == "tournament" ||
+						suffix == "casual" ||
+						suffix == "community" ||
+						suffix == "mvm" ||
+						suffix == "valvecomp" {
 						return fs.SkipDir
 					}
 				}
@@ -487,12 +527,16 @@ func SortDemos(demoList *[]Demo, culled []Demo, sortYear bool, sortGameType bool
 					GetGameType(&demos[i], showConVars)
 				}
 				switch demos[i].GameType {
-				case 0:
+				case tournament:
 					gameType = "tournament"
-				case 1:
+				case casual:
 					gameType = "casual"
-				case 2:
+				case community:
+					gameType = "community"
+				case mvm:
 					gameType = "mvm"
+				case valvecomp:
+					gameType = "valvecomp"
 				}
 			}
 

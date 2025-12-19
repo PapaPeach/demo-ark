@@ -301,7 +301,7 @@ prompt8:
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
 		fmt.Println("(8 / 17) Enter game types for demos you'd like to mark for culling.")
-		fmt.Print("Presse [Enter] with no input to skip / [T]ournament / [C]asual / [M]vM / [D]efault / [B]ack:")
+		fmt.Print("Presse [Enter] with no input to skip / [T]ournament / [C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive / [D]efault / [B]ack:")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil {
@@ -326,14 +326,18 @@ prompt8:
 		}
 
 		// Validate value length
-		if len(input) > 2 {
+		if len(input) > 4 {
 			log.Printf("Invalid input: %s. Will not allow culling of all demos.\n", input)
 			continue
 		}
 
 		// Validate value contents
 		input = strings.ToLower(input)
-		if !(strings.ContainsRune(input, 't') || strings.ContainsRune(input, 'c') || strings.ContainsRune(input, 'm')) {
+		if !(strings.ContainsRune(input, 't') ||
+			strings.ContainsRune(input, 'c') ||
+			strings.ContainsRune(input, 'q') ||
+			strings.ContainsRune(input, 'm') ||
+			strings.ContainsRune(input, 'v')) {
 			log.Printf("Invalid input: %s. Example: \"CM\" would mark Casual and MvM demos for culling.\n", input)
 			continue
 		}
@@ -663,16 +667,20 @@ func GetArgs() Arguments {
 		if strings.HasPrefix(arg, CullGameTypes+"=") {
 			gameTypes := arg[len(CullGameTypes)+1:]
 			// Validate value length
-			if len(gameTypes) > 2 {
-				log.Printf("Invalid CullGameType value: %s. Will not allow culling of all demos.\nUsage: CullGameType=cm (t = Tournament, c = Casual, m = MvM).\n", gameTypes)
+			if len(gameTypes) > 4 {
+				log.Printf("Invalid CullGameType value: %s. Will not allow culling of all demos.\nUsage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n", gameTypes)
 				util.EnterToExit(false)
 			} else if len(gameTypes) == 0 {
-				log.Printf("Invalid CullGameType value. Need game type key.\nUsage: CullGameType=cm (t = Tournament, c = Casual, m = MvM).\n")
+				log.Printf("Invalid CullGameType value. Need game type key.\nUsage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
 				util.EnterToExit(false)
 			}
 			// Validate value contents
-			if !(strings.ContainsRune(gameTypes, 't') || strings.ContainsRune(gameTypes, 'c') || strings.ContainsRune(gameTypes, 'm')) {
-				log.Printf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (t = Tournament, c = Casual, m = MvM).\n", gameTypes)
+			if !(strings.ContainsRune(gameTypes, 't') ||
+				strings.ContainsRune(gameTypes, 'c') ||
+				strings.ContainsRune(gameTypes, 'q') ||
+				strings.ContainsRune(gameTypes, 'm') ||
+				strings.ContainsRune(gameTypes, 'v')) {
+				log.Printf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n", gameTypes)
 				util.EnterToExit(false)
 			}
 
