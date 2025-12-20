@@ -1,6 +1,7 @@
 *.dem
 *.exe
 *.txt
+*.vscode
 *.zip
 
 test*/*

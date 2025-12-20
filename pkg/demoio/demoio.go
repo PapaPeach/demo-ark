@@ -363,7 +363,7 @@ func GetGameType(demo *Demo, showConVars bool) {
 				CheckConVar(sc.ConVars, "sv_vote_issue_kick_allowed", "1") { // Casual
 				demo.GameType = casual
 				return
-			} else if CheckConVar(sc.ConVars, "tf_ctf_bonus_time", "0") { // Valve comp
+			} else if CheckConVar(sc.ConVars, "mp_forceautoteam", "1") { // Valve comp
 				demo.GameType = valvecomp
 				return
 			}
