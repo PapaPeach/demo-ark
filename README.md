@@ -3,7 +3,7 @@ The automated demo archiving program for TF2 to help save you from the flood of 
 
 I wrote this because I have always been irritated by the shortcomings of TF2's Demo Support implementation which registered Casual as Tournament matches. When RGL and other leagues forced this to be enabled I got tired of manually toggling `ds_enable` and didn't want 4 hour Hightower games to consume my SSDs.
 
-Demo Ark supports the following game types: community competitive (like RGL), Casual, Valve competitive, MvM, and community servers.
+Demo Ark supports the following game types: community competitive (like RGL), Casual, Valve competitive, MvM, and community servers (community game modes such as VSH or Zombie Infection are considered community servers).
 
 # Installation
 1. Download latest release version of Demo Ark.
@@ -41,8 +41,8 @@ For example: `./demo-ark silent=true sortYear=1 ZipOlderThan=3 SNIPE=the_med.dem
 | SearchDirs     |   true (1) / false (0)   |     false     | Search subdirectories within the current directory |
 | CreateShortcut |   true (1) / false (0)   |     false     | **Windows / Linux:** Create a shortcut to run program with the selected options<br>**Mac:** Print a copyable path to the program with selected options |
 | LaunchTF2      |   true (1) / false (0)   |     false     | Launch TF2 while program runs |
-| CullMode       |          0 - 2           |       0       | **0:** Set aside culled demos to "culled" folder<br>**1:** Delete previously set aside demos, then set aside next batch of culled demos to be deleted on future Demo Ark runs<br>**2:** Delete demos immediately |
-| CullGameTypes  |      t, c, q, m, v       |      ""       | Cull demos of a specific game types (won't allow culling of all game types)<br>**T**ournament, **C**asual, **Q**uickPlay (Community), **M**vM, **V**alve Competitive<br>Example: `cullgametypes=cm` Will cull **C**asual and **M**vM |
+| CullMode       |          0 - 2           |       1       | **0:** Set aside culled demos to "culled" folder<br>**1:** Delete previously set aside demos, then set aside next batch of culled demos to be deleted on future Demo Ark runs<br>**2:** Delete demos immediately |
+| CullGameTypes  |        c, q, m, v        |      "c"      | Cull demos of a specific game types: **C**asual, **Q**uickPlay (Community), **M**vM, **V**alve Competitive<br>Example: `cullgametypes=cm` Will cull **C**asual and **M**vM |
 | CullBelow      |    0 (disabled) - 300    |      30       | Number of seconds that demos below that duration will be deleted |
 | ZipOlderThan   |    0 (disabled) - 255    |       1       | Zip demos older than this many calender years<br>**Note: Compression takes about 0.4s per unsorted demo** |
 | IgnoreWords    | Any words after key word |   "ignore"    | Ignore file / folder names containing string<br>**Note: This must be the last argument (other than its keywords)** |

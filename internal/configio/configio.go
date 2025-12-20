@@ -28,7 +28,7 @@ type Arguments struct {
 	ZipOlderThan   uint8    // Zip demos older than this many years
 	CullMode       uint8    // 0: Set aside culled demos to a "culled" directory 1: Delete previously set aside demos, then set aside culled demos 2: Delete culled demos
 	CullBelow      uint16   // Number of seconds that demos below that duration will be deleted
-	CullGameTypes  string   // Cull specified gametypes (t = Tournament, c = Casual, m = MvM)
+	CullGameTypes  string   // Cull specified gametypes
 	Snipe          string   // Snipe a specific file (exactly) to execute program on (mainly for debugging)
 	IgnoreWords    []string // Ignore file / folder names containing string
 }
@@ -48,9 +48,9 @@ var def = Arguments{
 	LaunchTF2:      false,
 	ShowConVars:    false,
 	ZipOlderThan:   1,
-	CullMode:       0,
+	CullMode:       1,
 	CullBelow:      30,
-	CullGameTypes:  "",
+	CullGameTypes:  "c",
 	Snipe:          "",
 	IgnoreWords:    []string{"ignore"},
 }
@@ -301,7 +301,7 @@ prompt8:
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
 		fmt.Println("(8 / 16) Enter game types for demos you'd like to mark for culling.")
-		fmt.Print("Presse [Enter] with no input to skip / [T]ournament / [C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive / [D]efault / [B]ack:")
+		fmt.Print("Presse [Enter] with no input to skip / [C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive / [D]efault / [B]ack:")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil {
@@ -325,16 +325,9 @@ prompt8:
 			goto prompt7
 		}
 
-		// Validate value length
-		if len(input) > 4 {
-			log.Printf("Invalid input: %s. Will not allow culling of all demos.\n", input)
-			continue
-		}
-
 		// Validate value contents
 		input = strings.ToLower(input)
-		if !(strings.ContainsRune(input, 't') ||
-			strings.ContainsRune(input, 'c') ||
+		if !(strings.ContainsRune(input, 'c') ||
 			strings.ContainsRune(input, 'q') ||
 			strings.ContainsRune(input, 'm') ||
 			strings.ContainsRune(input, 'v')) {
@@ -658,20 +651,16 @@ func GetArgs() Arguments {
 		if strings.HasPrefix(arg, CullGameTypes+"=") {
 			gameTypes := arg[len(CullGameTypes)+1:]
 			// Validate value length
-			if len(gameTypes) > 4 {
-				log.Printf("Invalid CullGameType value: %s. Will not allow culling of all demos.\nUsage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n", gameTypes)
-				util.EnterToExit(false)
-			} else if len(gameTypes) == 0 {
-				log.Printf("Invalid CullGameType value. Need game type key.\nUsage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
+			if len(gameTypes) == 0 {
+				log.Printf("Invalid CullGameType value. Need game type key.\nUsage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
 				util.EnterToExit(false)
 			}
 			// Validate value contents
-			if !(strings.ContainsRune(gameTypes, 't') ||
-				strings.ContainsRune(gameTypes, 'c') ||
+			if !(strings.ContainsRune(gameTypes, 'c') ||
 				strings.ContainsRune(gameTypes, 'q') ||
 				strings.ContainsRune(gameTypes, 'm') ||
 				strings.ContainsRune(gameTypes, 'v')) {
-				log.Printf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n", gameTypes)
+				log.Printf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n", gameTypes)
 				util.EnterToExit(false)
 			}
 

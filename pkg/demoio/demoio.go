@@ -200,16 +200,11 @@ func CullShortDemos(demos *[]Demo, min uint16) []Demo {
 /* Culls demos of a specified game type based on a key string. */
 func CullGameTypes(demos *[]Demo, key string) []Demo {
 	// Parse key
-	cullTournament := false
 	cullCasual := false
 	cullCommunity := false
 	cullMvm := false
 	cullValveComp := false
 	parsed := 0
-	if strings.ContainsRune(key, 't') {
-		cullTournament = true
-		parsed++
-	}
 	if strings.ContainsRune(key, 'c') {
 		cullCasual = true
 		parsed++
@@ -229,7 +224,7 @@ func CullGameTypes(demos *[]Demo, key string) []Demo {
 
 	// Ensure key only contains usable characters
 	if parsed != len(key) {
-		log.Printf("Invalid CullGameType key. Usage: CullGameType=cm (t = Tournament, c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
+		log.Printf("Invalid CullGameType key. Usage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
 		os.Exit(1)
 	}
 
@@ -238,9 +233,6 @@ func CullGameTypes(demos *[]Demo, key string) []Demo {
 	keep := (*demos)[:0]
 	for _, demo := range *demos {
 		switch {
-		case cullTournament && demo.GameType == tournament: // Cull Tournament
-			cull = append(cull, demo)
-			fmt.Printf("Marked demo for culling: %s\tGame Type: Tournament\n", demo.Name)
 		case cullCasual && demo.GameType == casual: // Cull Casual
 			cull = append(cull, demo)
 			fmt.Printf("Marked demo for culling: %s\tGame Type: Casual\n", demo.Name)
