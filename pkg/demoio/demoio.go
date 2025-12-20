@@ -115,8 +115,13 @@ func ZipOldDemos(zipOlderThan uint8) {
 		os.Exit(1)
 	}
 
-	// Check if file is older than threshhold
+	// If ZipOlderThan is 1 year, wait until Spring season (Feb) to zip last year
 	year := time.Now().Year()
+	if zipOlderThan == 1 && time.Now().Month() < 2 {
+		year--
+	}
+
+	// Check if file is older than threshhold
 	for _, filename := range contents {
 		// DataMajorDir=true file structure (demos_2YYY/gametype/blah.dem)
 		if len(filename) == 10 && strings.HasPrefix(filename, "demos_2") {

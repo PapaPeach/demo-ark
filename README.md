@@ -6,7 +6,7 @@ I wrote this because I have always been irritated by the shortcomings of TF2's D
 Demo Ark supports the following game types: community competitive (like RGL), Casual, Valve competitive, MvM, and community servers (community game modes such as VSH or Zombie Infection are considered community servers).
 
 # Installation
-1. Download latest release version of Demo Ark.
+1. Download latest version of Demo Ark from the [Releases page](https://github.com/PapaPeach/demo-ark/releases).
 2. Place **demoark.exe** where TF2 records demos to (this can be configured in-game with `ds_dir ...`).
 3. Double click **demoark.exe** to run it. Your computer will likely warn you about running an executable from an unknown creator, you can run anyway.
 4. Follow the prompts to configure demo sorting to your preference.
@@ -44,14 +44,15 @@ For example: `./demo-ark silent=true sortYear=1 ZipOlderThan=3 SNIPE=the_med.dem
 | CullMode       |          0 - 2           |       1       | **0:** Set aside culled demos to "culled" folder<br>**1:** Delete previously set aside demos, then set aside next batch of culled demos to be deleted on future Demo Ark runs<br>**2:** Delete demos immediately |
 | CullGameTypes  |        c, q, m, v        |      "c"      | Cull demos of a specific game types: **C**asual, **Q**uickPlay (Community), **M**vM, **V**alve Competitive<br>Example: `cullgametypes=cm` Will cull **C**asual and **M**vM |
 | CullBelow      |    0 (disabled) - 300    |      30       | Number of seconds that demos below that duration will be deleted |
-| ZipOlderThan   |    0 (disabled) - 255    |       1       | Zip demos older than this many calender years<br>**Note: Compression takes about 0.4s per unsorted demo** |
+| ZipOlderThan   |    0 (disabled) - 255    |       1       | Zip demos older than this many years (will wait until Spring season starts to zip previous year)<br>**Note: Compression takes about 0.4s per unsorted demo** |
 | IgnoreWords    | Any words after key word |   "ignore"    | Ignore file / folder names containing string<br>**Note: This must be the last argument (other than its keywords)** |
 | Snipe          | Any continuous filename  |      ""       | Snipe a specific file (exactly) to execute program on (mainly for debugging) |
 | ShowConVars    |   true (1) / false (0)   |     false     | Outputs console variables parsed from demo (mainly for debugging) |
 
 # Potential Options
-I tried to keep the options limited to things most people would find useful to keep customization approachable and maintainable. Unfortunately, I can't please everyone, but I think the program covers an overwhelming majority of use cases.  
-I can't add one-off customization options for individuals, if I recieve enough feedback for features via the appropriate channels (such as my [HUD / Project Discord](https://discord.gg/HyZRVtp)) I will do my best to add them.
+I tried to keep the options limited to things most people would find useful to keep customization approachable and maintainable. Unfortunately, I can't please everyone, but I think the program covers an overwhelming majority of use cases.
+
+I can't add one-off customization options for individuals, if I receive enough feedback for features via the appropriate channels (such as my [HUD / Project Discord](https://discord.gg/HyZRVtp)) I will do my best to add them.
 | Key Word       |        Status        | Description |
 |----------------|:--------------------:|-------------|
 | Multithread    | Planned, see below | Allow the use of multiple cores / threads<br> **0:** Off **1:** All but 1 core **2:** Half cores **3:** Quarter cores... |
@@ -60,7 +61,8 @@ I can't add one-off customization options for individuals, if I recieve enough f
 | TwelveHourTime | Removed, too finicky | **True:** 12hr<br>**False:** 24hr |
 
 **Note on Multithreading:** This was originally a planned feature at launch. But after farther consideration this was postponed as it was determined to have limited usefulness and require more testing.  
-The bulk of processing time for Demo Ark is spent on disk read / write operations that would see no benefit from CPU parallelization. Furthermore, multithreading has a substantial initial overhead that would result in performance gains only for bulk sorting of ~100+ demos per core, which would likely only be the initial run of Demo Ark for most users. On the frequent smaller operations intended with the automated functionality, the initial overhead of multithreading would actually *increase* sorting times, though this would be recognized by the program and disabled.  
+The bulk of processing time for Demo Ark is spent on disk read / write operations that would see no benefit from CPU parallelization. Furthermore, multithreading has a substantial initial overhead that would result in performance gains only for bulk sorting of ~100+ demos per core, which would likely only be the initial run of Demo Ark for most users.  
+On the frequent smaller operations intended with the automated functionality, the initial overhead of multithreading would actually *increase* sorting times, though this would be recognized by the program and disabled.  
 It is still a planned feature, but that is why it is not available on release.
 
 # Supported Operating Systems
@@ -85,4 +87,4 @@ If the project takes off I can look into getting Demo Ark officially approved by
 **[Pektezol's BitReader Go Package](https://github.com/pektezol/bitreader)** - An accessible Go package for parsing bit-buffered demo contents.  
 **[Jxeng's Shortcut Go Package](https://github.com/jxeng/shortcut)** - A Go package that greatly simplifies Windows shortcut creation.  
 **[Demostf's Demo Parser](https://codeberg.org/demostf/parser)** - My reference for TF2 specific bit-values, packet, and message specs.  
-**Ward** - Providing feedback and testing predecessor programs and pre-release versions of DemoArk.
+**Ward** - Providing feedback and testing predecessor programs and pre-release versions of Demo Ark.
