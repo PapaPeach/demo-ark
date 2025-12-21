@@ -70,8 +70,8 @@ func GetEventTxts(searchDirs bool, ignoreWords []string) (map[string][]string, [
 		fileInfo, err := os.Stat(path)
 		if err != nil {
 			log.Printf("Error getting stats on %v: %v\n", path, err)
-		}
-		if fileInfo.Size() == 0 {
+		} else if fileInfo.Size() == 0 {
+			fmt.Printf("Marked empty event file for culling: %s\n", path)
 			culledEventTxts = append(culledEventTxts, path)
 			return
 		}
@@ -145,12 +145,22 @@ func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 			return
 		}
 
-		// If file is empty, cull it
+		// If file is completely empty, cull it
 		fileInfo, err := os.Stat(path)
 		if err != nil {
 			log.Printf("Error getting stats on %v: %v\n", path, err)
+		} else if fileInfo.Size() == 0 { // Completely empty
+			fmt.Printf("Marked empty event file for culling: %s\n", path)
+			culledEventJsons = append(culledEventJsons, path)
+			return
 		}
-		if fileInfo.Size() == 0 {
+
+		// Check if file lacks bookmarks, cull it
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			log.Printf("Error checking contents of %v: %v", path, err)
+		} else if !strings.Contains(string(contents), "\t\t") { // No bookmarks
+			fmt.Printf("Marked empty event file for culling: %s\n", path)
 			culledEventJsons = append(culledEventJsons, path)
 			return
 		}
