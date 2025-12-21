@@ -16,7 +16,7 @@ Demo Ark supports the following game types: community competitive (like RGL), Ca
 To simplify keeping your demos organized, Demo Ark is built to enable various ways to automate running. The simplest is built directly into the program. Demo Ark can create a shortcut that will run with your desired options and can even launch the game while it runs. To enable this:
 1. Place **demoark.exe** where TF2 records demos to (this can be configured in-game with `ds_dir ...`).
 2. Run **demoark.exe** and select the options for how you'd like to organize your demos.
-3. When asked if you'd like to create a shortcut (prompt 13 / 16), select **Yes**.
+3. When asked if you'd like to create a shortcut (prompt 13 / 14), select **Yes**.
 4. When asked if you'd like the shortcut to launch TF2 alongside Demo Ark, select **Yes**.
 5. Answer the remaining prompts. When finished, Demo Ark will create a shortcut with the desired settings that you can place wherever you'd like.
 
