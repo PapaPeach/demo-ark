@@ -166,10 +166,10 @@ func parseBoolPrompt(prompt string, message string, def bool) (bool, bool) {
 }
 
 /* Parse the integer value from a user response to a given prompt. */
-func parseIntPrompt(prompt string, max uint64, def uint16) (uint16, bool) {
+func parseIntPrompt(prompt string, maximum uint64, def uint16) (uint16, bool) {
 	for {
 		// Prompt user
-		fmt.Printf("%s\n0 (disabled) - %d / [D]efault / [B]ack: ", prompt, max)
+		fmt.Printf("%s\n0 (disabled) - %d / [D]efault / [B]ack: ", prompt, maximum)
 
 		// Receive input
 		input := ""
@@ -185,8 +185,8 @@ func parseIntPrompt(prompt string, max uint64, def uint16) (uint16, bool) {
 		}
 
 		// Parse text input
-		input = strings.ToLower(input[:1])
-		switch input {
+		inputString := strings.ToLower(input[:1])
+		switch inputString {
 		case "d": // Default
 			fmt.Println("Using default setting")
 			return def, false
@@ -205,7 +205,7 @@ func parseIntPrompt(prompt string, max uint64, def uint16) (uint16, bool) {
 			log.Println("Error parsing response to integer prompt from user:", err)
 			continue
 		}
-		if inputInt <= max {
+		if inputInt <= maximum {
 			return uint16(inputInt), false
 		}
 	}
@@ -243,7 +243,7 @@ prompt0:
 prompt1:
 	if !cmdArgs[SortYear] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.SortYear, back = parseBoolPrompt("(1 / 17) Would you like to sort demos into folders by year?", "sorting years", def.SortYear)
 		if back {
 			goto prompt0
@@ -252,7 +252,7 @@ prompt1:
 prompt2:
 	if !cmdArgs[SortGameType] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.SortGameType, back = parseBoolPrompt("(2 / 17) Would you like to sort demos into folders by game type?", "sorting game types", def.SortGameType)
 		if back { // Handle back command
 			goto prompt1
@@ -261,7 +261,7 @@ prompt2:
 prompt3:
 	if !cmdArgs[DateMajorDir] && (a.SortYear || a.SortGameType) { // Only ask if we're sorting into folders at all
 		fmt.Println()
-		back := false
+		var back bool
 		a.DateMajorDir, back = parseBoolPrompt("(3 / 17) Would you like the folder to be the year?\nEx: demos_2025/tournament/recorded.dem", "using date-major directories", def.DateMajorDir)
 		if back { // Handle back command
 			goto prompt2
@@ -272,7 +272,7 @@ prompt3:
 prompt4:
 	if !cmdArgs[RenameMap] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.RenameMap, back = parseBoolPrompt("(4 / 17) Would you like to add the map name to a demo's name?", "renaming with map names", def.RenameMap)
 		if back { // Handle back command
 			if a.SortYear || a.SortGameType { // Special case for skip logic
@@ -284,7 +284,7 @@ prompt4:
 prompt5:
 	if !cmdArgs[RenameDuration] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.RenameDuration, back = parseBoolPrompt("(5 / 17) Would you like to add the duration to a demo's name?", "renaming with demo durations", def.RenameDuration)
 		if back { // Handle back command
 			goto prompt4
@@ -293,7 +293,7 @@ prompt5:
 prompt6:
 	if !cmdArgs[KeepPrefix] && (a.RenameMap || a.RenameDuration) { // Only ask if we are renaming at all
 		fmt.Println()
-		back := false
+		var back bool
 		a.KeepPrefix, back = parseBoolPrompt("(6 / 17) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes", def.KeepPrefix)
 		if back { // Handle back command
 			goto prompt5
@@ -304,7 +304,7 @@ prompt6:
 prompt7:
 	if !cmdArgs[CullBelow] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.CullBelow, back = parseIntPrompt("(7 / 17) Enter the minimum length of a demo in seconds to mark for culling.", 300, def.CullBelow)
 		if back { // Handle back command
 			if a.RenameMap || a.RenameDuration { // Special case for skip logic
@@ -368,7 +368,7 @@ prompt8:
 prompt9:
 	if !cmdArgs[CullEventTxts] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.CullEventTxts, back = parseBoolPrompt("(9 / 17) Would you like to cull all _events.txt files (from ds_log 1)?\nNote: empty files or files without matching demos will be culled regardless.", "culling all _event.txt files", def.CullEventTxts)
 		if back { // Handle back command
 			goto prompt8
@@ -378,7 +378,7 @@ prompt9:
 prompt10:
 	if !cmdArgs[CullEventJsons] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.CullEventJsons, back = parseBoolPrompt("(10 / 17) Would you like to cull all _.json event files (from ds_log 1)?\nNote: empty files or files without matching demos will be culled regardless.", "culling all .json event files", def.CullEventTxts)
 		if back { // Handle back command
 			goto prompt9
@@ -388,7 +388,7 @@ prompt10:
 prompt11:
 	if !cmdArgs[CullScreenshots] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.CullScreenshots, back = parseBoolPrompt("(11 / 17) Would you like to cull all _.tga screenshot files (from ds_screens 1)?\nNote: Screenshots without matching demos will be culled regardless.", "culling all .tga screenshot files", def.CullEventTxts)
 		if back { // Handle back command
 			goto prompt10
@@ -486,7 +486,6 @@ prompt14:
 			// Genuine error
 			log.Println("Error getting input from user:", err)
 			continue
-
 		}
 
 		// Handle Default or Back command
@@ -516,7 +515,7 @@ prompt14:
 prompt15:
 	if !cmdArgs[SearchDirs] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.SearchDirs, back = parseBoolPrompt("(15 / 17) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories", def.SearchDirs)
 		if back { // Handle back command
 			goto prompt14
@@ -527,7 +526,7 @@ prompt15:
 prompt16:
 	if !cmdArgs[CreateShortcut] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.CreateShortcut, back = parseBoolPrompt("(16 / 17) Would you like to create a shortcut to launch Demo Ark with selected options?", "creating a shortcut to run program with selected options", def.CreateShortcut)
 		if back { // Handle back command
 			goto prompt15
@@ -536,7 +535,7 @@ prompt16:
 prompt17:
 	if !cmdArgs[LaunchTF2] && a.CreateShortcut {
 		fmt.Println()
-		back := false
+		var back bool
 		a.LaunchTF2, back = parseBoolPrompt("(17 / 17) Would you like the shortcut to launch TF2 alongside Demo Ark?", "launching TF2 while program runs", def.LaunchTF2)
 		if back { // Handle back command
 			goto prompt16
@@ -568,7 +567,7 @@ prompt17:
 prompt18:
 	if !cmdArgs[ShowConVars] {
 		fmt.Println()
-		back := false
+		var back bool
 		a.ShowConVars, back = parseBoolPrompt("(Debug 1 / 2) Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables", def.ShowConVars)
 		if back { // Handle back command
 			if a.CreateShortcut { // Special case for skip logic
@@ -643,7 +642,6 @@ func LaunchGame() {
 
 /* Gets argument values. */
 func GetArgs() Arguments {
-
 	// Convert args to lower case
 	var args []string
 	for _, arg := range os.Args[1:] {

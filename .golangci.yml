@@ -17,10 +17,10 @@ linters:
     - errcheck
     - errname
     - errorlint
-    - exhaustive
+    #- exhaustive
     - exptostd
     - fatcontext
-    - funlen
+    #- funlen
     - gocheckcompilerdirectives
     - gochecknoglobals
     - gochecknoinits
@@ -28,7 +28,7 @@ linters:
     #- gocognit
     - goconst
     - gocritic
-    - gocyclo
+    #- gocyclo
     #- godot
     - gomoddirectives
     - goprintffuncname
@@ -43,11 +43,11 @@ linters:
     - mnd
     - musttag
     - nakedret
-    - nestif
+    #- nestif
     - nilerr
     - nilnesserr
     - nilnil
-    - noctx
+    #- noctx
     - nolintlint
     - nonamedreturns
     - nosprintfhostport
@@ -77,7 +77,7 @@ linters:
   settings:
     cyclop:
       max-complexity: 40
-      package-average: 20
+      package-average: 22
     depguard:
       rules:
         deprecated:

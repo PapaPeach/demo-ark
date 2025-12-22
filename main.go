@@ -44,18 +44,24 @@ func main() {
 	} else {
 		demoList = demoio.GetDemos(args.SearchDirs, args.IgnoreWords)
 		demoListCount = len(demoList)
+	}
+
+	// Handle length appropriately
+	if demoListCount == 1 {
+		fmt.Println("Scanning 1 demo...")
+	} else {
 		fmt.Printf("Scanning %d demos...\n", demoListCount)
 	}
 
 	// Get _events.txt
 	// TODO: Allow sniping events?
-	eventTxts, culledEventTxts := demoio.GetEventTxts(args.CullEventTxts, args.CullEventTxts, args.IgnoreWords)
+	eventTxts, culledEventTxts := demoio.GetEventTxts(args.SearchDirs, args.CullEventTxts, args.IgnoreWords)
 
 	// Get demo.json events
-	eventJsons, culledEventJsons := demoio.GetEventJsons(args.CullEventJsons, args.CullEventJsons, args.IgnoreWords)
+	eventJsons, culledEventJsons := demoio.GetEventJsons(args.SearchDirs, args.CullEventJsons, args.IgnoreWords)
 
 	// Get demo.tga screenshots
-	screenshots := demoio.GetScreenshots(args.CullScreenshots, args.IgnoreWords)
+	screenshots := demoio.GetScreenshots(args.SearchDirs, args.IgnoreWords)
 
 	// Cull short demos prior to parsing more intensive information from demos
 	var culledDemos []Demo

@@ -8,8 +8,8 @@ import (
 /* Prompts user to press enter to exit the program, then exit when entered. */
 func EnterToExit(silent bool) {
 	if !silent {
-		fmt.Println("Press enter to close.")
-		fmt.Scanln()
+		_, _ = fmt.Println("Press enter to close.")
+		_, _ = fmt.Scanln()
 	}
 	os.Exit(0)
 }

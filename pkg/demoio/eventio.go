@@ -2,6 +2,7 @@ package demoio
 
 import (
 	"bufio"
+	"demo-ark/demoark/internal/util"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -14,7 +15,7 @@ import (
 
 /* Walker function for searching directories and processing files appropriately. */
 func eventWalker(ignoreWords []string, processFile func(path string, file fs.DirEntry)) {
-	filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
+	err := filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
 		if err != nil {
 			fmt.Printf("Error reading %v: %v\n", path, err)
 			return nil
@@ -53,6 +54,10 @@ func eventWalker(ignoreWords []string, processFile func(path string, file fs.Dir
 		processFile(path, file)
 		return nil
 	})
+	if err != nil {
+		log.Println("Error walking directory:", err)
+		util.EnterToExit(false)
+	}
 }
 
 /* Get _event.txt files and associated demos. */
@@ -255,7 +260,6 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 
 culling:
 	// If there's no events to cull, skip culling
-	culledDir := "demos_culled"
 	length := len(culledEventTxts)
 	if length == 0 {
 		return
@@ -333,7 +337,6 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 
 culling:
 	// If there's no events to cull, skip culling
-	culledDir := "demos_culled"
 	length := len(culledEventJsons)
 	if length == 0 {
 		return

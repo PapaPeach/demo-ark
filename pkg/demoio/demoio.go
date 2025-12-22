@@ -1,6 +1,7 @@
 package demoio
 
 import (
+	"demo-ark/demoark/internal/util"
 	"errors"
 	"fmt"
 	"io"
@@ -27,11 +28,23 @@ type Demo struct {
 	GameType int8      // 0: Tournament | 1: Casual | 2: MvM
 }
 
+// Game type number values
 const tournament = 0
 const casual = 1
 const community = 2
 const mvm = 3
 const valvecomp = 4
+
+// Game type keys
+const keyCulled = "culled"
+const keyTournament = "tournament"
+const keyCasual = "casual"
+const keyCommunity = "community"
+const keyMvm = "mvm"
+const keyValveComp = "valvecomp"
+
+// Name of culled directory
+const culledDir = "demos_culled"
 
 /* Zips a folder of demos from. */
 func ZipDir(dirName string) {
@@ -43,7 +56,11 @@ func ZipDir(dirName string) {
 	_, err := os.Stat(dirName + ".zip")
 	if err == nil {
 		fmt.Printf("Detected existing %s.zip, consolidating contents...\n", dirName)
-		os.Rename(dirName+".zip", oldZip)
+		er := os.Rename(dirName+".zip", oldZip)
+		if er != nil {
+			log.Println("Error renaming existing zip:", er)
+			util.EnterToExit(false)
+		}
 		hasConflict = true
 	}
 
@@ -62,7 +79,8 @@ func ZipDir(dirName string) {
 	// Copy contents of pre-existing zip to current zip
 	if hasConflict {
 		// Open existing zip archive for reading
-		zipReader, err := zip.OpenReader(oldZip)
+		var zipReader *zip.ReadCloser
+		zipReader, err = zip.OpenReader(oldZip)
 		if err != nil {
 			log.Println("Error opening existing zip:", err)
 			os.Exit(1)
@@ -128,7 +146,7 @@ func ZipOldDemos(zipOlderThan uint8) {
 			// Parse file's year
 			ignored := ""
 			fileYear := 0
-			_, err := fmt.Sscanf(filename, "%6s%d", &ignored, &fileYear)
+			_, err = fmt.Sscanf(filename, "%6s%d", &ignored, &fileYear)
 			if err != nil {
 				log.Println("Error parsing year from filename:", err)
 				continue
@@ -145,13 +163,15 @@ func ZipOldDemos(zipOlderThan uint8) {
 			filename == "demos_valvecomp" {
 			// DateMajorDir=false file structure (demos_gametype/YYYY/blah.dem)
 			// Open gametype directory
-			gameTypeDir, err := os.Open(filename)
+			var gameTypeDir *os.File
+			gameTypeDir, err = os.Open(filename)
 			if err != nil {
 				log.Println("Error opening gametype directory:", err)
 				continue
 			}
 
-			gameTypeContents, err := gameTypeDir.Readdirnames(0)
+			var gameTypeContents []string
+			gameTypeContents, err = gameTypeDir.Readdirnames(0)
 			if err != nil {
 				log.Println("Error reading contents of gametype directory:", err)
 				continue
@@ -166,7 +186,8 @@ func ZipOldDemos(zipOlderThan uint8) {
 				}
 
 				// Parse years from file names
-				fileYear, err := strconv.Atoi(innerFilename)
+				var fileYear int
+				fileYear, err = strconv.Atoi(innerFilename)
 				if err != nil {
 					log.Println("Error parsing year from inner filename:", err)
 					continue
@@ -182,11 +203,11 @@ func ZipOldDemos(zipOlderThan uint8) {
 }
 
 /* Culls demos shorter than a specified minimum length. */
-func CullShortDemos(demos *[]Demo, min uint16) []Demo {
+func CullShortDemos(demos *[]Demo, minimum uint16) []Demo {
 	var cull []Demo
 	keep := (*demos)[:0]
 	for _, demo := range *demos {
-		if demo.Duration < float32(min) && demo.Duration > 0.0 { // If short than minimum, move it to cull list
+		if demo.Duration < float32(minimum) && demo.Duration > 0.0 { // If short than minimum, move it to cull list
 			cull = append(cull, demo)
 			fmt.Printf("Marked short demo for culling: %s\tDuration: %.2f seconds\n", demo.Name, demo.Duration)
 		} else { // If longer than minimum, keep it in main demo list
@@ -409,7 +430,7 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 
 	// Search subdirectories
 	if searchDirs {
-		filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
+		err := filepath.WalkDir(".", func(path string, file fs.DirEntry, err error) error {
 			if err != nil {
 				fmt.Printf("Error reading %v: %v\n", path, err)
 				return nil
@@ -427,12 +448,12 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 				// Skip known demos_[known sorted]
 				if len(file.Name()) >= len("demos_mvm") {
 					suffix := file.Name()[6:] // demos_[suffix]
-					if suffix == "culled" ||
-						suffix == "tournament" ||
-						suffix == "casual" ||
-						suffix == "community" ||
-						suffix == "mvm" ||
-						suffix == "valvecomp" {
+					if suffix == keyCulled ||
+						suffix == keyTournament ||
+						suffix == keyCasual ||
+						suffix == keyCommunity ||
+						suffix == keyMvm ||
+						suffix == keyValveComp {
 						return fs.SkipDir
 					}
 				}
@@ -441,6 +462,10 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 			processFile(path, file)
 			return nil
 		})
+		if err != nil {
+			log.Println("Error walking directory:", err)
+			util.EnterToExit(false)
+		}
 	} else { // Just search current directory
 		// Get list of files in current directory
 		dir, err := os.Open(".")
@@ -525,15 +550,15 @@ func SortDemos(demoList *[]Demo, culled []Demo, sortYear bool, sortGameType bool
 				}
 				switch demos[i].GameType {
 				case tournament:
-					gameType = "tournament"
+					gameType = keyTournament
 				case casual:
-					gameType = "casual"
+					gameType = keyCasual
 				case community:
-					gameType = "community"
+					gameType = keyCommunity
 				case mvm:
-					gameType = "mvm"
+					gameType = keyMvm
 				case valvecomp:
-					gameType = "valvecomp"
+					gameType = keyValveComp
 				}
 			}
 
@@ -568,7 +593,6 @@ func SortDemos(demoList *[]Demo, culled []Demo, sortYear bool, sortGameType bool
 
 cull:
 	// Remove previously culled for two-stage cull
-	culledDir := "demos_culled"
 	if cullMode == 1 {
 		err := os.RemoveAll(filepath.Join(".", culledDir))
 		if err != nil {
