@@ -35,6 +35,7 @@ func main() {
 	}
 
 	// Get demos
+	fmt.Println("Counting demos...")
 	var demoList []Demo
 	var demoListCount int
 	if len(args.Snipe) > 0 {
@@ -52,6 +53,9 @@ func main() {
 
 	// Get demo.json events
 	eventJsons, culledEventJsons := demoio.GetEventJsons(args.SearchDirs, args.IgnoreWords)
+
+	// Get demo.tga screenshots
+	screenshots := demoio.GetScreenshots(args.SearchDirs, args.IgnoreWords)
 
 	// Cull short demos prior to parsing more intensive information from demos
 	var culledDemos []Demo
@@ -89,6 +93,9 @@ func main() {
 
 	// Update demo.json events
 	demoio.UpdateEventJsons(eventJsons, culledEventJsons, demoList, args.CullMode)
+
+	// Update demo.tga screenshots
+	demoio.UpdateScreenshots(screenshots, demoList, args.CullMode)
 
 	// Zip folders older than specified number of years
 	if args.ZipOlderThan > 0 {

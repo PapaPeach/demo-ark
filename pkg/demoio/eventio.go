@@ -145,16 +145,6 @@ func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 			return
 		}
 
-		// If file is completely empty, cull it
-		fileInfo, err := os.Stat(path)
-		if err != nil {
-			log.Printf("Error getting stats on %v: %v\n", path, err)
-		} else if fileInfo.Size() == 0 { // Completely empty
-			fmt.Printf("Marked empty event file for culling: %s\n", path)
-			culledEventJsons = append(culledEventJsons, path)
-			return
-		}
-
 		// Check if file lacks bookmarks, cull it
 		contents, err := os.ReadFile(path)
 		if err != nil {
@@ -253,6 +243,13 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 		return
 	}
 
+	// Handle length accordingly
+	if length == 1 {
+		fmt.Println("Culling 1 event .json...")
+	} else { // Plural demos
+		fmt.Printf("Culling %d event .jsons...\n", length)
+	}
+
 	// Create the culled directory
 	if cullMode < 2 {
 		// Make directory to move events to
@@ -263,7 +260,7 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 		}
 	}
 
-	// Cull demos
+	// Cull events
 	for _, eventTxt := range culledEventTxts {
 		// Delete culled events
 		if cullMode == 2 {
@@ -306,6 +303,7 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 
 		// Cull jsons with no corresponding demo
 		if !foundMatch {
+			fmt.Printf("Culled event file without corresponding demo: %s\n", eventJson)
 			culledEventJsons = append(culledEventJsons, eventJson)
 		}
 	}
@@ -315,6 +313,13 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 	length := len(culledEventJsons)
 	if length == 0 {
 		return
+	}
+
+	// Handle length accordingly
+	if length == 1 {
+		fmt.Println("Culling 1 _events.txt...")
+	} else { // Plural demos
+		fmt.Printf("Culling %d _event.txts...\n", length)
 	}
 
 	// Create the culled directory
@@ -327,7 +332,7 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 		}
 	}
 
-	// Cull demos
+	// Cull events
 	for _, eventJson := range culledEventJsons {
 		// Delete culled events
 		if cullMode == 2 {
