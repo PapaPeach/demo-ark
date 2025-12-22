@@ -13,46 +13,52 @@ import (
 )
 
 type Arguments struct {
-	Silent         bool     // Run program without prompts
-	SortYear       bool     // Group demos by year
-	SortGameType   bool     // Group demos by game type
-	DateMajorDir   bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
-	KeepPrefix     bool     // Rename options won't overwrite a detected ds_prefix
-	RenameMap      bool     // Rename the demo to contain the map name
-	RenameDuration bool     // Rename demo to contain the duration of the demo
-	SearchDirs     bool     // Search subdirectories within the current directory
-	Multithread    bool     // Allow the use of multiple cores / threads
-	CreateShortcut bool     // Create a shortcut with the currently selected options
-	LaunchTF2      bool     // Launch TF2 alongside the program's execution
-	ShowConVars    bool     // Outputs console variables parsed from demo (mainly for debugging)
-	ZipOlderThan   uint8    // Zip demos older than this many years
-	CullMode       uint8    // 0: Set aside culled demos to a "culled" directory 1: Delete previously set aside demos, then set aside culled demos 2: Delete culled demos
-	CullBelow      uint16   // Number of seconds that demos below that duration will be deleted
-	CullGameTypes  string   // Cull specified gametypes
-	Snipe          string   // Snipe a specific file (exactly) to execute program on (mainly for debugging)
-	IgnoreWords    []string // Ignore file / folder names containing string
+	Silent          bool     // Run program without prompts
+	SortYear        bool     // Group demos by year
+	SortGameType    bool     // Group demos by game type
+	DateMajorDir    bool     // True: year/month/gametype/demo.dem | False: gametype/year/month/demo.dem
+	KeepPrefix      bool     // Rename options won't overwrite a detected ds_prefix
+	RenameMap       bool     // Rename the demo to contain the map name
+	RenameDuration  bool     // Rename demo to contain the duration of the demo
+	SearchDirs      bool     // Search subdirectories within the current directory
+	Multithread     bool     // Allow the use of multiple cores / threads
+	CreateShortcut  bool     // Create a shortcut with the currently selected options
+	LaunchTF2       bool     // Launch TF2 alongside the program's execution
+	CullEventTxts   bool     // Cull all _events.txt files made by ds_log 1
+	CullEventJsons  bool     // Cull all demo.json event files made by ds_log 1
+	CullScreenshots bool     // Cull all demo.tga screenshots made by ds_screens 1
+	ShowConVars     bool     // Outputs console variables parsed from demo (mainly for debugging)
+	ZipOlderThan    uint8    // Zip demos older than this many years
+	CullMode        uint8    // 0: Set aside culled demos to a "culled" directory 1: Delete previously set aside demos, then set aside culled demos 2: Delete culled demos
+	CullBelow       uint16   // Number of seconds that demos below that duration will be deleted
+	CullGameTypes   string   // Cull specified gametypes
+	Snipe           string   // Snipe a specific file (exactly) to execute program on (mainly for debugging)
+	IgnoreWords     []string // Ignore file / folder names containing string
 }
 
 // Default option values
 var def = Arguments{
-	Silent:         false,
-	SortYear:       true,
-	SortGameType:   true,
-	DateMajorDir:   true,
-	KeepPrefix:     true,
-	RenameMap:      false,
-	RenameDuration: false,
-	SearchDirs:     false,
-	Multithread:    true,
-	CreateShortcut: false,
-	LaunchTF2:      false,
-	ShowConVars:    false,
-	ZipOlderThan:   1,
-	CullMode:       1,
-	CullBelow:      30,
-	CullGameTypes:  "c",
-	Snipe:          "",
-	IgnoreWords:    []string{"ignore"},
+	Silent:          false,
+	SortYear:        true,
+	SortGameType:    true,
+	DateMajorDir:    true,
+	KeepPrefix:      true,
+	RenameMap:       false,
+	RenameDuration:  false,
+	SearchDirs:      false,
+	Multithread:     true,
+	CreateShortcut:  false,
+	LaunchTF2:       false,
+	CullEventTxts:   false,
+	CullEventJsons:  false,
+	CullScreenshots: false,
+	ShowConVars:     false,
+	ZipOlderThan:    1,
+	CullMode:        1,
+	CullBelow:       30,
+	CullGameTypes:   "c",
+	Snipe:           "",
+	IgnoreWords:     []string{"ignore"},
 }
 
 /* Keywords for command line arguments. */
@@ -67,6 +73,9 @@ const SearchDirs = "searchdirs"
 const Multithread = "multithread" // TODO
 const CreateShortcut = "createshortcut"
 const LaunchTF2 = "launchtf2"
+const CullEventTxts = "culleventtxts"
+const CullEventJsons = "culleventjsons"
+const CullScreenshots = "cullscreenshots"
 const ShowConVars = "showconvars"
 const ZipOlderThan = "zipolderthan"
 const CullMode = "cullmode"
@@ -207,7 +216,7 @@ func promptArgs(a *Arguments, cmdArgs map[string]bool) {
 	defer fmt.Println()
 prompt0:
 	// Explain prompts
-	fmt.Println("Some options were not set by the program launch arguments. There may be up to 14 options to set.")
+	fmt.Println("Some options were not set by the program launch arguments. There may be up to 17 options to set.")
 	for {
 		fmt.Print("Would you like to skip setting options and run with remaining options set to defaults?\nPress [Enter] to view remaining options or type \"skip\" to skip: ")
 		input := ""
@@ -235,7 +244,7 @@ prompt1:
 	if !cmdArgs[SortYear] {
 		fmt.Println()
 		back := false
-		a.SortYear, back = parseBoolPrompt("(1 / 14) Would you like to sort demos into folders by year?", "sorting years", def.SortYear)
+		a.SortYear, back = parseBoolPrompt("(1 / 17) Would you like to sort demos into folders by year?", "sorting years", def.SortYear)
 		if back {
 			goto prompt0
 		}
@@ -244,7 +253,7 @@ prompt2:
 	if !cmdArgs[SortGameType] {
 		fmt.Println()
 		back := false
-		a.SortGameType, back = parseBoolPrompt("(2 / 14) Would you like to sort demos into folders by game type?", "sorting game types", def.SortGameType)
+		a.SortGameType, back = parseBoolPrompt("(2 / 17) Would you like to sort demos into folders by game type?", "sorting game types", def.SortGameType)
 		if back { // Handle back command
 			goto prompt1
 		}
@@ -253,7 +262,7 @@ prompt3:
 	if !cmdArgs[DateMajorDir] && (a.SortYear || a.SortGameType) { // Only ask if we're sorting into folders at all
 		fmt.Println()
 		back := false
-		a.DateMajorDir, back = parseBoolPrompt("(3 / 14) Would you like the folder structure to prioritize sorting by year (year/gametype/demo.dem)?", "using date-major directories", def.DateMajorDir)
+		a.DateMajorDir, back = parseBoolPrompt("(3 / 17) Would you like the folder to be the year?\nEx: demos_2025/tournament/recorded.dem", "using date-major directories", def.DateMajorDir)
 		if back { // Handle back command
 			goto prompt2
 		}
@@ -264,7 +273,7 @@ prompt4:
 	if !cmdArgs[RenameMap] {
 		fmt.Println()
 		back := false
-		a.RenameMap, back = parseBoolPrompt("(4 / 14) Would you like to add the map name to a demo's name?", "renaming with map names", def.RenameMap)
+		a.RenameMap, back = parseBoolPrompt("(4 / 17) Would you like to add the map name to a demo's name?", "renaming with map names", def.RenameMap)
 		if back { // Handle back command
 			if a.SortYear || a.SortGameType { // Special case for skip logic
 				goto prompt3
@@ -276,7 +285,7 @@ prompt5:
 	if !cmdArgs[RenameDuration] {
 		fmt.Println()
 		back := false
-		a.RenameDuration, back = parseBoolPrompt("(5 / 14) Would you like to add the duration to a demo's name?", "renaming with demo durations", def.RenameDuration)
+		a.RenameDuration, back = parseBoolPrompt("(5 / 17) Would you like to add the duration to a demo's name?", "renaming with demo durations", def.RenameDuration)
 		if back { // Handle back command
 			goto prompt4
 		}
@@ -285,7 +294,7 @@ prompt6:
 	if !cmdArgs[KeepPrefix] && (a.RenameMap || a.RenameDuration) { // Only ask if we are renaming at all
 		fmt.Println()
 		back := false
-		a.KeepPrefix, back = parseBoolPrompt("(6 / 14) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes", def.KeepPrefix)
+		a.KeepPrefix, back = parseBoolPrompt("(6 / 17) Would you like to keep the current prefix (title before the date) of demos?\nMap names and demo duration would be added in addition to the prefix.", "keeping demo prefixes", def.KeepPrefix)
 		if back { // Handle back command
 			goto prompt5
 		}
@@ -296,7 +305,7 @@ prompt7:
 	if !cmdArgs[CullBelow] {
 		fmt.Println()
 		back := false
-		a.CullBelow, back = parseIntPrompt("(7 / 14) Enter the minimum length of a demo in seconds to mark for culling.", 300, def.CullBelow)
+		a.CullBelow, back = parseIntPrompt("(7 / 17) Enter the minimum length of a demo in seconds to mark for culling.", 300, def.CullBelow)
 		if back { // Handle back command
 			if a.RenameMap || a.RenameDuration { // Special case for skip logic
 				goto prompt6
@@ -316,7 +325,7 @@ prompt7:
 prompt8:
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
-		fmt.Println("(8 / 14) Enter game types for demos you'd like to mark for culling (empty is valid).")
+		fmt.Println("(8 / 17) Enter game types for demos you'd like to mark for culling (empty is valid).")
 		fmt.Print("[C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive / [D]efault / [B]ack:")
 		input := ""
 		_, err := fmt.Scanln(&input)
@@ -357,12 +366,41 @@ prompt8:
 	}
 
 prompt9:
-	// Only ask if we're culling at all
-	if !cmdArgs[CullMode] && (a.CullBelow != 0 || len(a.CullGameTypes) != 0) {
+	if !cmdArgs[CullEventTxts] {
+		fmt.Println()
+		back := false
+		a.CullEventTxts, back = parseBoolPrompt("(9 / 17) Would you like to cull all _events.txt files (from ds_log 1)?\nNote: empty files or files without matching demos will be culled regardless.", "culling all _event.txt files", def.CullEventTxts)
+		if back { // Handle back command
+			goto prompt8
+		}
+	}
+
+prompt10:
+	if !cmdArgs[CullEventJsons] {
+		fmt.Println()
+		back := false
+		a.CullEventJsons, back = parseBoolPrompt("(10 / 17) Would you like to cull all _.json event files (from ds_log 1)?\nNote: empty files or files without matching demos will be culled regardless.", "culling all .json event files", def.CullEventTxts)
+		if back { // Handle back command
+			goto prompt9
+		}
+	}
+
+prompt11:
+	if !cmdArgs[CullScreenshots] {
+		fmt.Println()
+		back := false
+		a.CullScreenshots, back = parseBoolPrompt("(11 / 17) Would you like to cull all _.tga screenshot files (from ds_screens 1)?\nNote: Screenshots without matching demos will be culled regardless.", "culling all .tga screenshot files", def.CullEventTxts)
+		if back { // Handle back command
+			goto prompt10
+		}
+	}
+
+prompt12:
+	if !cmdArgs[CullMode] {
 		fmt.Println()
 		for {
 			// Prompt user
-			fmt.Print("(9 / 14) What would you like to do with culled demos?\n[0] Set aside to \"culled\" folder / [1] Set aside to be deleted on the next Demo Ark run / [2] Delete immediately / [D]efault / [B]ack: ")
+			fmt.Print("(12 / 17) What would you like to do with culled demos?\n[0] Set aside to \"culled\" folder / [1] Set aside to be deleted on the next Demo Ark run / [2] Delete immediately / [D]efault / [B]ack: ")
 
 			// Receive input
 			input := ""
@@ -378,9 +416,9 @@ prompt9:
 			case "d": // Default
 				fmt.Println("Using default setting")
 				a.CullMode = def.CullMode
-				goto prompt10
+				goto prompt13
 			case "b": // Back
-				goto prompt8
+				goto prompt11
 			}
 
 			// Parse input
@@ -411,15 +449,12 @@ prompt9:
 	}
 
 	// Get ZipOlderThan int
-prompt10:
+prompt13:
 	if !cmdArgs[ZipOlderThan] {
 		fmt.Println()
-		tempZipOlderThan, back := parseIntPrompt("(10 / 14) Enter the minimum age of a demo in years to compress to a .zip file.", 255, uint16(def.ZipOlderThan))
+		tempZipOlderThan, back := parseIntPrompt("(13 / 17) Enter the minimum age of a demo in years to compress to a .zip file.", 255, uint16(def.ZipOlderThan))
 		if back { // Handle back command
-			if a.CullBelow != 0 || len(a.CullGameTypes) != 0 { // Special case for skip logic
-				goto prompt9
-			}
-			goto prompt8
+			goto prompt12
 		}
 
 		// Handle option value
@@ -432,11 +467,11 @@ prompt10:
 	}
 
 	// Get IgnoreWords strings
-prompt11:
+prompt14:
 	prompted := false
 	for !cmdArgs[IgnoreWords] {
 		if !prompted {
-			fmt.Print("\n(11 / 14) Enter a word that should tell the program to ignore demos containing specified word.\nPress [Enter] with no input to skip / [D]efault / [B]ack: ")
+			fmt.Print("\n(14 / 17) Enter a word that should tell the program to ignore demos containing specified word.\nPress [Enter] with no input to skip / [D]efault / [B]ack: ")
 		} else {
 			fmt.Print("Press [Enter] with no input to continue: ")
 		}
@@ -460,9 +495,9 @@ prompt11:
 			case "d":
 				fmt.Println("Using default value")
 				a.IgnoreWords = def.IgnoreWords
-				goto prompt12
+				goto prompt15
 			case "b":
-				goto prompt10
+				goto prompt13
 			}
 
 			prompted = true
@@ -478,33 +513,33 @@ prompt11:
 	}
 
 	// Search Directories
-prompt12:
+prompt15:
 	if !cmdArgs[SearchDirs] {
 		fmt.Println()
 		back := false
-		a.SearchDirs, back = parseBoolPrompt("(12 / 14) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories", def.SearchDirs)
+		a.SearchDirs, back = parseBoolPrompt("(15 / 17) Would you like to search subdirectories (folders) within the current directory?", "searching subdirectories", def.SearchDirs)
 		if back { // Handle back command
-			goto prompt11
+			goto prompt14
 		}
 	}
 
 	// Get shortcut options
-prompt13:
+prompt16:
 	if !cmdArgs[CreateShortcut] {
 		fmt.Println()
 		back := false
-		a.CreateShortcut, back = parseBoolPrompt("(13 / 14) Would you like to create a shortcut to launch Demo Ark with selected options?", "creating a shortcut to run program with selected options", def.CreateShortcut)
+		a.CreateShortcut, back = parseBoolPrompt("(16 / 17) Would you like to create a shortcut to launch Demo Ark with selected options?", "creating a shortcut to run program with selected options", def.CreateShortcut)
 		if back { // Handle back command
-			goto prompt12
+			goto prompt15
 		}
 	}
-prompt14:
+prompt17:
 	if !cmdArgs[LaunchTF2] && a.CreateShortcut {
 		fmt.Println()
 		back := false
-		a.LaunchTF2, back = parseBoolPrompt("(14 / 14) Would you like the shortcut to launch TF2 alongside Demo Ark?", "launching TF2 while program runs", def.LaunchTF2)
+		a.LaunchTF2, back = parseBoolPrompt("(17 / 17) Would you like the shortcut to launch TF2 alongside Demo Ark?", "launching TF2 while program runs", def.LaunchTF2)
 		if back { // Handle back command
-			goto prompt13
+			goto prompt16
 		}
 	}
 
@@ -530,16 +565,16 @@ prompt14:
 		}
 	}
 
-prompt15:
+prompt18:
 	if !cmdArgs[ShowConVars] {
 		fmt.Println()
 		back := false
 		a.ShowConVars, back = parseBoolPrompt("(Debug 1 / 2) Would you like to show parsed console variables when determining demos' game types?", "showing parsed console variables", def.ShowConVars)
 		if back { // Handle back command
 			if a.CreateShortcut { // Special case for skip logic
-				goto prompt14
+				goto prompt17
 			}
-			goto prompt13
+			goto prompt16
 		}
 	}
 
@@ -566,7 +601,7 @@ prompt15:
 			a.Snipe = def.Snipe
 			return
 		case "b":
-			goto prompt15
+			goto prompt18
 		}
 
 		// Enforce minimum length
@@ -694,6 +729,11 @@ func GetArgs() Arguments {
 			break
 		}
 	}
+
+	// Extra file culling
+	a.CullEventTxts, cmdArgs[CullEventTxts] = parseBoolArg(args, CullEventTxts, a.CullEventTxts, "culling all _event.txt files")
+	a.CullEventJsons, cmdArgs[CullEventJsons] = parseBoolArg(args, CullEventJsons, a.CullEventJsons, "culling all .json event files")
+	a.CullScreenshots, cmdArgs[CullScreenshots] = parseBoolArg(args, CullScreenshots, a.CullScreenshots, "culling all .tga screenshot files")
 
 	// Get ZipOlderThan int
 	var tempZipOlderThan uint16

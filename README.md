@@ -16,7 +16,7 @@ Demo Ark supports the following game types: community competitive (like RGL), Ca
 To simplify keeping your demos organized, Demo Ark is built to enable various ways to automate running. The simplest is built directly into the program. Demo Ark can create a shortcut that will run with your desired options and can even launch the game while it runs. To enable this:
 1. Place **demoark.exe** where TF2 records demos to (this can be configured in-game with `ds_dir ...`).
 2. Run **demoark.exe** and select the options for how you'd like to organize your demos.
-3. When asked if you'd like to create a shortcut (prompt 13 / 14), select **Yes**.
+3. When asked if you'd like to create a shortcut (prompt 16 / 17), select **Yes**.
 4. When asked if you'd like the shortcut to launch TF2 alongside Demo Ark, select **Yes**.
 5. Answer the remaining prompts. When finished, Demo Ark will create a shortcut with the desired settings that you can place wherever you'd like.
 
@@ -29,25 +29,28 @@ Demo Ark can be run with a slew of options, configured either via the prompts up
 - The IgnoreWords argument is the exception to this formatting, it should be the last argument, with all desired ignored words being separated with spaces.
 
 For example: `./demo-ark silent=true sortYear=1 ZipOlderThan=3 SNIPE=the_med.dem IgnoreWords untouchable secret`  
-| Key Word       |     Possible Values      | Default Value | Description |
-|----------------|:------------------------:|:-------------:|-------------|
-| Silent         |   true (1) / false (0)   |     false     | Run the program without prompts |
-| SortYear       |   true (1) / false (0)   |     true      | Group demos into folders by year |
-| SortGameType   |   true (1) / false (0)   |     true      | Group demos into folders by gametype |
-| DateMajorDir   |   true (1) / false (0)   |     true      | **True:** year/month/gametype/demo.dem<br>**False:** gametype/year/month/demo.dem |
-| RenameMap      |   true (1) / false (0)   |     false     | Rename the demo to contain the map name |
-| RenameDuration |   true (1) / false (0)   |     false     | Rename demo to contain the duration of the demo |
-| KeepPrefix     |   true (1) / false (0)   |     true      | Rename options won't overwrite a detected ds_prefix |
-| SearchDirs     |   true (1) / false (0)   |     false     | Search subdirectories within the current directory |
-| CreateShortcut |   true (1) / false (0)   |     false     | **Windows / Linux:** Create a shortcut to run program with the selected options<br>**Mac:** Print a copyable path to the program with selected options |
-| LaunchTF2      |   true (1) / false (0)   |     false     | Launch TF2 while program runs |
-| CullMode       |          0 - 2           |       1       | **0:** Set aside culled demos to "culled" folder<br>**1:** Delete previously set aside demos, then set aside next batch of culled demos to be deleted on future Demo Ark runs<br>**2:** Delete demos immediately |
-| CullGameTypes  |        c, q, m, v        |      "c"      | Cull demos of a specific game types: **C**asual, **Q**uickPlay (Community), **M**vM, **V**alve Competitive<br>Example: `cullgametypes=cm` Will cull **C**asual and **M**vM |
-| CullBelow      |    0 (disabled) - 300    |      30       | Number of seconds that demos below that duration will be deleted |
-| ZipOlderThan   |    0 (disabled) - 255    |       1       | Zip demos older than this many years (will wait until Spring season starts to zip previous year)<br>**Note: Compression takes about 0.4s per unsorted demo** |
-| IgnoreWords    | Any words after key word |   "ignore"    | Ignore file / folder names containing string<br>**Note: This must be the last argument (other than its keywords)** |
-| Snipe          | Any continuous filename  |      ""       | Snipe a specific file (exactly) to execute program on (mainly for debugging) |
-| ShowConVars    |   true (1) / false (0)   |     false     | Outputs console variables parsed from demo (mainly for debugging) |
+| Key Word        |     Possible Values      | Default Value | Description |
+|-----------------|:------------------------:|:-------------:|-------------|
+| Silent          |   true (1) / false (0)   |     false     | Run the program without prompts |
+| SortYear        |   true (1) / false (0)   |     true      | Group demos into folders by year |
+| SortGameType    |   true (1) / false (0)   |     true      | Group demos into folders by gametype |
+| DateMajorDir    |   true (1) / false (0)   |     true      | **True:** year/month/gametype/demo.dem<br>**False:** gametype/year/month/demo.dem |
+| RenameMap       |   true (1) / false (0)   |     false     | Rename the demo to contain the map name |
+| RenameDuration  |   true (1) / false (0)   |     false     | Rename demo to contain the duration of the demo |
+| KeepPrefix      |   true (1) / false (0)   |     true      | Rename options won't overwrite a detected ds_prefix |
+| SearchDirs      |   true (1) / false (0)   |     false     | Search subdirectories within the current directory |
+| CreateShortcut  |   true (1) / false (0)   |     false     | **Windows / Linux:** Create a shortcut to run program with the selected options<br>**Mac:** Print a copyable path to the program with selected options |
+| LaunchTF2       |   true (1) / false (0)   |     false     | Launch TF2 while program runs |
+| CullEventTxts   |   true (1) / false (0)   |     false     | Cull all _events.txt files made by `ds_log 1`<br>**Note: Empty files will be culled regardless of setting** |
+| CullEventJsons  |   true (1) / false (0)   |     false     | Cull all _.json event files made by `ds_log 1`<br>**Note: Empty files or files with no corresponding demo will be culled regardless of setting** |
+| CullScreenshots |   true (1) / false (0)   |     false     | Cull all _.tga screenshot made by `ds_screens 1`<br>**Note: Screenshots with no corresponding demo will be culled regardless of setting** |
+| CullMode        |          0 - 2           |       1       | **0:** Set aside culled demos to "culled" folder<br>**1:** Delete previously set aside demos, then set aside next batch of culled demos to be deleted on future Demo Ark runs<br>**2:** Delete demos immediately |
+| CullGameTypes   |        c, q, m, v        |      "c"      | Cull demos of a specific game types: **C**asual, **Q**uickPlay (Community), **M**vM, **V**alve Competitive<br>**Example:** `cullgametypes=cm` Will cull **C**asual and **M**vM |
+| CullBelow       |    0 (disabled) - 300    |      30       | Number of seconds that demos below that duration will be deleted |
+| ZipOlderThan    |    0 (disabled) - 255    |       1       | Zip demos older than this many years (will wait until Spring season starts to zip previous year)<br>**Note: Compression takes about 0.4s per unsorted demo** |
+| IgnoreWords     | Any words after key word |   "ignore"    | Ignore file / folder names containing string<br>**Note: This must be the last argument (other than its keywords)** |
+| Snipe           | Any continuous filename  |      ""       | Snipe a specific file (exactly) to execute program on (mainly for debugging) |
+| ShowConVars     |   true (1) / false (0)   |     false     | Outputs console variables parsed from demo (mainly for debugging) |
 
 # Potential Options
 I tried to keep the options limited to things most people would find useful to keep customization approachable and maintainable. Unfortunately, I can't please everyone, but I think the program covers an overwhelming majority of use cases.

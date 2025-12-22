@@ -49,13 +49,13 @@ func main() {
 
 	// Get _events.txt
 	// TODO: Allow sniping events?
-	eventTxts, culledEventTxts := demoio.GetEventTxts(args.SearchDirs, args.IgnoreWords)
+	eventTxts, culledEventTxts := demoio.GetEventTxts(args.CullEventTxts, args.CullEventTxts, args.IgnoreWords)
 
 	// Get demo.json events
-	eventJsons, culledEventJsons := demoio.GetEventJsons(args.SearchDirs, args.IgnoreWords)
+	eventJsons, culledEventJsons := demoio.GetEventJsons(args.CullEventJsons, args.CullEventJsons, args.IgnoreWords)
 
 	// Get demo.tga screenshots
-	screenshots := demoio.GetScreenshots(args.SearchDirs, args.IgnoreWords)
+	screenshots := demoio.GetScreenshots(args.CullScreenshots, args.IgnoreWords)
 
 	// Cull short demos prior to parsing more intensive information from demos
 	var culledDemos []Demo
@@ -89,13 +89,13 @@ func main() {
 	demoio.SortDemos(&demoList, culledDemos, args.SortYear, args.SortGameType, args.DateMajorDir, args.ShowConVars, args.CullMode)
 
 	// Update _events.txt
-	demoio.UpdateEventTxts(eventTxts, culledEventTxts, demoList, args.CullMode)
+	demoio.UpdateEventTxts(eventTxts, culledEventTxts, demoList, args.CullEventTxts, args.CullMode)
 
 	// Update demo.json events
-	demoio.UpdateEventJsons(eventJsons, culledEventJsons, demoList, args.CullMode)
+	demoio.UpdateEventJsons(eventJsons, culledEventJsons, demoList, args.CullEventJsons, args.CullMode)
 
 	// Update demo.tga screenshots
-	demoio.UpdateScreenshots(screenshots, demoList, args.CullMode)
+	demoio.UpdateScreenshots(screenshots, demoList, args.CullScreenshots, args.CullMode)
 
 	// Zip folders older than specified number of years
 	if args.ZipOlderThan > 0 {

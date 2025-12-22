@@ -50,10 +50,18 @@ func GetScreenshots(searchDirs bool, ignoreWords []string) []string {
 }
 
 /* Update screenshots with their demos or cull demoless screenshots. */
-func UpdateScreenshots(screenshots []string, demos []Demo, cullMode uint8) {
+func UpdateScreenshots(screenshots []string, demos []Demo, cullScreenshots bool, cullMode uint8) {
+
 	// Search for screenshots corresponding to demos
 	var culledScreenshots []string
 	for _, screenshot := range screenshots {
+		// If we're culling all, skip processing
+		if cullScreenshots {
+			culledScreenshots = append(culledScreenshots, screenshot)
+			continue
+		}
+
+		// Look for demos matching screenshot
 		foundMatch := false
 		for _, demo := range demos {
 			targetTitle := strings.Replace(demo.Name, ".dem", ".tga", 1)
@@ -61,7 +69,7 @@ func UpdateScreenshots(screenshots []string, demos []Demo, cullMode uint8) {
 				continue
 			}
 
-			// Update matching json name
+			// Update matching screenshot name
 			foundMatch = true
 			newName := strings.Replace(demo.NewName, ".dem", ".tga", 1)
 			err := os.Rename(screenshot, filepath.Join(demo.WishDir, newName))

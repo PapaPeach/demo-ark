@@ -56,13 +56,19 @@ func eventWalker(ignoreWords []string, processFile func(path string, file fs.Dir
 }
 
 /* Get _event.txt files and associated demos. */
-func GetEventTxts(searchDirs bool, ignoreWords []string) (map[string][]string, []string) {
+func GetEventTxts(searchDirs bool, cullEventTxts bool, ignoreWords []string) (map[string][]string, []string) {
 	// Filter list to only have _events.txt files
 	eventTxts := make(map[string][]string)
 	var culledEventTxts []string
 	processFile := func(path string, file fs.DirEntry) {
 		// Skip irrelevant files
 		if file.IsDir() || !strings.HasSuffix(path, "_events.txt") {
+			return
+		}
+
+		// If we're culling all, skip processing
+		if cullEventTxts {
+			culledEventTxts = append(culledEventTxts, path)
 			return
 		}
 
@@ -135,13 +141,19 @@ func GetEventTxts(searchDirs bool, ignoreWords []string) (map[string][]string, [
 }
 
 /* Get event jsons associated with demos. */
-func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
+func GetEventJsons(searchDirs bool, cullEventJsons bool, ignoreWords []string) ([]string, []string) {
 	// Filter list to only have .json files
 	var eventJsons []string
 	var culledEventJsons []string
 	processFile := func(path string, file fs.DirEntry) {
 		// Skip irrelevant files
 		if file.IsDir() || !strings.HasSuffix(file.Name(), ".json") {
+			return
+		}
+
+		// If we're culling all, skip processing
+		if cullEventJsons {
+			culledEventJsons = append(culledEventJsons, path)
 			return
 		}
 
@@ -185,7 +197,12 @@ func GetEventJsons(searchDirs bool, ignoreWords []string) ([]string, []string) {
 }
 
 /* Updated _events.txt files with new demo names and cull empty _events.txt. */
-func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, demos []Demo, cullMode uint8) {
+func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, demos []Demo, cullEventTxts bool, cullMode uint8) {
+	// If we're culling all, skip processing
+	if cullEventTxts {
+		goto culling
+	}
+
 	// Check if a demo is in an _events.txt file
 	for eventTxt, eventDemos := range eventTxts {
 		// Read file
@@ -236,6 +253,7 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 		os.Remove(tempFile.Name())
 	}
 
+culling:
 	// If there's no events to cull, skip culling
 	culledDir := "demos_culled"
 	length := len(culledEventTxts)
@@ -281,7 +299,12 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 }
 
 /* Update .json event files and cull empty or demoless .json files. */
-func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []Demo, cullMode uint8) {
+func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []Demo, cullEventJsons bool, cullMode uint8) {
+	// If we're culling all, skip processing
+	if cullEventJsons {
+		goto culling
+	}
+
 	// Search for json corresponding to demos
 	for _, eventJson := range eventJsons {
 		foundMatch := false
@@ -308,6 +331,7 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 		}
 	}
 
+culling:
 	// If there's no events to cull, skip culling
 	culledDir := "demos_culled"
 	length := len(culledEventJsons)
