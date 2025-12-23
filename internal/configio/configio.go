@@ -326,7 +326,7 @@ prompt8:
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
 		fmt.Println("(8 / 17) Enter game types for demos you'd like to mark for culling (empty is valid).")
-		fmt.Print("[C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive / [D]efault / [B]ack: ")
+		fmt.Print("[C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive\n[D]efault / [B]ack: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil {
@@ -400,7 +400,7 @@ prompt12:
 		fmt.Println()
 		for {
 			// Prompt user
-			fmt.Print("(12 / 17) What would you like to do with culled demos?\n[0] Set aside to \"culled\" folder / [1] Set aside to be deleted on the next Demo Ark run / [2] Delete immediately / [D]efault / [B]ack: ")
+			fmt.Print("(12 / 17) What would you like to do with culled demos?\n[0] Set aside to \"culled\" folder / [1] Set aside to be deleted on the next Demo Ark run / [2] Delete immediately\n[D]efault / [B]ack: ")
 
 			// Receive input
 			input := ""
