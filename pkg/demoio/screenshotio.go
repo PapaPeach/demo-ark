@@ -25,6 +25,8 @@ func GetScreenshots(searchDirs bool, ignoreWords []string) []string {
 
 	// Search subdirectories
 	if searchDirs {
+		// Prepend the screenshots/.. directory for skipping
+		ignoreWords = append([]string{"screenshots"}, ignoreWords...)
 		eventWalker(ignoreWords, processFile)
 	} else { // Just search current directory
 		// Get list of files in current directory

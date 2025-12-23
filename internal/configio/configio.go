@@ -262,7 +262,7 @@ prompt3:
 	if !cmdArgs[DateMajorDir] && (a.SortYear || a.SortGameType) { // Only ask if we're sorting into folders at all
 		fmt.Println()
 		var back bool
-		a.DateMajorDir, back = parseBoolPrompt("(3 / 17) Would you like the folder to be the year?\nEx: demos_2025/tournament/recorded.dem", "using date-major directories", def.DateMajorDir)
+		a.DateMajorDir, back = parseBoolPrompt("(3 / 17) Would you like the outer folder to be the year?\nEx: demos_2025/tournament/recorded.dem", "using date-major directories", def.DateMajorDir)
 		if back { // Handle back command
 			goto prompt2
 		}
@@ -326,7 +326,7 @@ prompt8:
 	for !cmdArgs[CullGameTypes] {
 		fmt.Println()
 		fmt.Println("(8 / 17) Enter game types for demos you'd like to mark for culling (empty is valid).")
-		fmt.Print("[C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive / [D]efault / [B]ack:")
+		fmt.Print("[C]asual / [Q]uickPlay (community) / [M]vM / [V]alve Competitive / [D]efault / [B]ack: ")
 		input := ""
 		_, err := fmt.Scanln(&input)
 		if err != nil {

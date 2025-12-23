@@ -292,13 +292,22 @@ func GetTimeFormat(twelveHourTime bool) string {
 
 /* Gets the date from a demo's name. */
 func GetDateTime(demo Demo) time.Time {
+	// Remove leading file path
+	var name string
+	pathIndex := strings.LastIndex(demo.Name, string(filepath.Separator))
+	if pathIndex != -1 {
+		name = demo.Name[pathIndex+1:]
+	} else {
+		name = demo.Name
+	}
+
 	// Search for valid date my locating year via: prefix[20]YY-MM-DD_HH-MM-SS
 	skipped := 0
-	for i := strings.Index(demo.Name, "20"); i > -1; i = strings.Index(demo.Name[skipped:], "20") {
+	for i := strings.Index(name, "20"); i > -1; i = strings.Index(name[skipped:], "20") {
 		dateIndex := skipped + i
 		skipped += i + 1
 
-		titleDateTime, err := time.Parse("2006-01-02_15-04-05", demo.Name[dateIndex:dateIndex+19])
+		titleDateTime, err := time.Parse("2006-01-02_15-04-05", name[dateIndex:dateIndex+19])
 		if err != nil { // This might error. We keep searching or fallback to demo's ModTime
 			fmt.Println(err)
 			continue
@@ -313,16 +322,25 @@ func GetDateTime(demo Demo) time.Time {
 
 /* Generates new names for demos to according to the arguments provided. */
 func GetNewName(demo *Demo, dateTimeFormat string, keepPrefix bool, renameMap bool, renameDuration bool) {
+	// Remove leading file path
+	var name string
+	pathIndex := strings.LastIndex(demo.Name, string(filepath.Separator))
+	if pathIndex != -1 {
+		name = demo.Name[pathIndex+1:]
+	} else {
+		name = demo.Name
+	}
+
 	// Get prefix
 	var wishName string
 	if keepPrefix {
 		// Locate prefix by indexing off year
 		yearString := strconv.Itoa(demo.DateTime.Year())
-		if yearIdx := strings.Index(demo.Name, yearString); yearIdx != -1 {
-			wishName = demo.Name[:yearIdx] + "_"
+		if yearIdx := strings.Index(name, yearString); yearIdx != -1 {
+			wishName = name[:yearIdx] + "_"
 		} else {
-			demIdx := strings.Index(demo.Name, ".dem")
-			wishName = demo.Name[:demIdx] + "_"
+			demIdx := strings.Index(name, ".dem")
+			wishName = name[:demIdx] + "_"
 		}
 	}
 
@@ -436,8 +454,16 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 				return nil
 			}
 
-			// Skip already sorted directories
+			// Skip specified directories
 			if file.IsDir() {
+				// Skip ignored words
+				for _, ignoreWord := range ignoreWords {
+					if strings.Contains(strings.ToLower(file.Name()), ignoreWord) {
+						return fs.SkipDir
+					}
+				}
+
+				// Skip already sorted directories
 				// demos_YYYY
 				var year int
 				sorted, _ := fmt.Sscanf(file.Name(), "demos_%d", &year)
@@ -586,7 +612,7 @@ func SortDemos(demoList *[]Demo, culled []Demo, sortYear bool, sortGameType bool
 			// Move demo to directory and rename
 			err = os.Rename(demos[i].Name, filepath.Join(demos[i].WishDir, demos[i].NewName))
 			if err != nil {
-				log.Println(err)
+				log.Println("Error moving demo to directory and renaming:", err)
 			}
 		}
 	}
@@ -638,7 +664,7 @@ cull:
 		// Move demo to culled directory
 		err := os.Rename(demo.Name, filepath.Join(culledDir, demo.NewName))
 		if err != nil {
-			log.Println(err)
+			log.Println("Error moving demo to culled directory:", err)
 		}
 	}
 }
