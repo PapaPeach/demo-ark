@@ -157,7 +157,11 @@ func parseBoolPrompt(prompt string, message string, def bool) (bool, bool) {
 			fmt.Println("Not", message)
 			return false, false
 		case "d": // Default
-			fmt.Println("Using default setting")
+			defString := "No"
+			if def {
+				defString = "Yes"
+			}
+			fmt.Println("Using default setting of:", defString)
 			return def, false
 		case "b": // Back
 			return def, true
@@ -188,7 +192,7 @@ func parseIntPrompt(prompt string, maximum uint64, def uint16) (uint16, bool) {
 		inputString := strings.ToLower(input[:1])
 		switch inputString {
 		case "d": // Default
-			fmt.Println("Using default setting")
+			fmt.Println("Using default setting of:", def)
 			return def, false
 		case "b": // Back
 			return def, true
@@ -343,7 +347,7 @@ prompt8:
 		// Handle Default or Back command
 		switch strings.ToLower(input[:1]) {
 		case "d":
-			fmt.Println("Using default value")
+			fmt.Println("Using default setting of:", def.CullGameTypes)
 			a.CullGameTypes = def.CullGameTypes
 			goto prompt9
 		case "b":
@@ -414,7 +418,7 @@ prompt12:
 			input = strings.ToLower(input[:1])
 			switch input {
 			case "d": // Default
-				fmt.Println("Using default setting")
+				fmt.Println("Using default setting of:", def.CullMode)
 				a.CullMode = def.CullMode
 				goto prompt13
 			case "b": // Back
@@ -492,7 +496,7 @@ prompt14:
 		if !prompted {
 			switch strings.ToLower(input) {
 			case "d":
-				fmt.Println("Using default value")
+				fmt.Println("Using default value of:", def.IgnoreWords[1:])
 				a.IgnoreWords = def.IgnoreWords
 				goto prompt15
 			case "b":
@@ -596,7 +600,7 @@ prompt18:
 		// Handle Default or Back command
 		switch strings.ToLower(input) {
 		case "d":
-			fmt.Println("Using default value")
+			fmt.Println("Using default setting of:", def.Snipe)
 			a.Snipe = def.Snipe
 			return
 		case "b":
