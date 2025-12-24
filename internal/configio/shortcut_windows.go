@@ -28,7 +28,14 @@ func CreateConfiguredShortcut(args Arguments) {
 	argsString := "Silent=1"
 	argsTypes := reflect.TypeOf(args)
 	argsValues := reflect.ValueOf(args)
+	defValues := reflect.ValueOf(def)
 	for i := 1; i < argsTypes.NumField(); i++ {
+		// Skip values with default setting
+		if reflect.DeepEqual(argsValues.Field(i).Interface(), defValues.Field(i).Interface()) {
+			fmt.Printf("Option %s uses default value of: %v, skipping this setting\n", argsTypes.Field(i).Name, argsValues.Field(i))
+			continue
+		}
+
 		// Format currently applied options as expected arguments
 		value := 0
 		switch argsValues.Field(i).Kind() {
@@ -62,9 +69,9 @@ func CreateConfiguredShortcut(args Arguments) {
 				continue
 			}
 
-			argsString += fmt.Sprintf(" %s=", argsTypes.Field(i).Name)
+			argsString += fmt.Sprintf(" %s", argsTypes.Field(i).Name)
 			for j := range argsValues.Field(i).Len() {
-				argsString += fmt.Sprintf("%s ", argsValues.Field(i).Index(j))
+				argsString += fmt.Sprintf(" %s", argsValues.Field(i).Index(j))
 			}
 
 		default:

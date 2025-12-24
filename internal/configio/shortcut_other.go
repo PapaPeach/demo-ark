@@ -26,15 +26,23 @@ func CreateConfiguredShortcut(args Arguments) {
 	argsString := "Silent=1"
 	argsTypes := reflect.TypeOf(args)
 	argsValues := reflect.ValueOf(args)
+	defValues := reflect.ValueOf(def)
 	for i := 1; i < argsTypes.NumField(); i++ {
+		// Skip values with default setting
+		if reflect.DeepEqual(argsValues.Field(i).Interface(), defValues.Field(i).Interface()) {
+			fmt.Printf("Option %s uses default value of: %v, skipping this setting\n", argsTypes.Field(i).Name, argsValues.Field(i))
+			continue
+		}
+
 		// Format currently applied options as expected arguments
 		value := 0
 		switch argsValues.Field(i).Kind() {
-		case reflect.Bool:
+		case reflect.Bool: // Boolean arguments
 			// Skip create shortcut
 			if strings.EqualFold(argsTypes.Field(i).Name, CreateShortcut) {
 				continue
 			}
+
 			// Simplify booleans arguments
 			if argsValues.Field(i).Bool() {
 				value = 1
@@ -43,7 +51,8 @@ func CreateConfiguredShortcut(args Arguments) {
 
 		case reflect.Uint8: // Int arguments
 			fallthrough
-		case reflect.Uint16:
+
+		case reflect.Uint16: // Int
 			argsString += fmt.Sprintf(" %s=%v", argsTypes.Field(i).Name, argsValues.Field(i))
 
 		case reflect.String: // String arguments
@@ -53,13 +62,16 @@ func CreateConfiguredShortcut(args Arguments) {
 			argsString += fmt.Sprintf(" %s=%s", argsTypes.Field(i).Name, argsValues.Field(i))
 
 		case reflect.Slice: // Slice argument
+			// Don't print just the slice name
 			if argsValues.Field(i).Len() == 0 {
 				continue
 			}
-			argsString += fmt.Sprintf(" %s=", argsTypes.Field(i).Name)
+
+			argsString += fmt.Sprintf(" %s", argsTypes.Field(i).Name)
 			for j := range argsValues.Field(i).Len() {
-				argsString += fmt.Sprintf("%s ", argsValues.Field(i).Index(j))
+				argsString += fmt.Sprintf(" %s", argsValues.Field(i).Index(j))
 			}
+
 		default:
 			log.Println("Error getting arguments for shortcut", err)
 			util.EnterToExit(false)
