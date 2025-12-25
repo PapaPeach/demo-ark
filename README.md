@@ -8,9 +8,9 @@ Demo Ark supports the following game types: community competitive (like RGL), Ca
 # Installation
 1. Download latest version of Demo Ark from the [Releases page](https://github.com/PapaPeach/demo-ark/releases).
 2. Place **demoark.exe** where TF2 records demos to (this can be configured in-game with `ds_dir ...`).
-3. Double click **demoark.exe** to run it. Your computer will likely warn you about running an executable from an unknown creator, you can run anyway.
-4. Follow the prompts to configure demo sorting to your preference.
-5. Profit.
+3. I recommend starting with a subset of demos or using "set aside culled demos" (`CullMode=0`) while configuring.
+4. Double click **demoark.exe** to run it. Your computer will likely warn you about running an executable from an unknown creator, you can run anyway.
+5. Follow the prompts to configure demo sorting to your preference.
 
 # Automated Running
 To simplify keeping your demos organized, Demo Ark is built to enable various ways to automate running. The simplest is built directly into the program. Demo Ark can create a shortcut that will run with your desired options and can even launch the game while it runs. To enable this:
@@ -47,7 +47,7 @@ For example: `./demo-ark silent=true sortYear=1 ZipOlderThan=3 SNIPE=the_med.dem
 | CullMode        |          0 - 2           |       1       | **0:** Set aside culled demos to "culled" folder<br>**1:** Delete previously set aside demos, then set aside next batch of culled demos to be deleted on future Demo Ark runs<br>**2:** Delete demos immediately |
 | CullGameTypes   |        c, q, m, v        |      "c"      | Cull demos of a specific game types: **C**asual, **Q**uickPlay (Community), **M**vM, **V**alve Competitive<br>**Example:** `cullgametypes=cm` Will cull **C**asual and **M**vM |
 | CullBelow       |    0 (disabled) - 300    |      30       | Number of seconds that demos below that duration will be deleted |
-| ZipOlderThan    |    0 (disabled) - 255    |       1       | Zip demos older than this many years (will wait until Spring season starts to zip previous year)<br>**Note: Compression takes about 0.4s per unsorted demo** |
+| ZipOlderThan    |    0 (disabled) - 255    |       1       | Zip demos older than this many years (will wait until Spring season starts to zip previous year)<br>**Note: Compression takes about 0.5s per unsorted demo** |
 | IgnoreWords     | Any words after key word |   "ignore"    | Ignore file / folder names containing string<br>**Note: This must be the last argument (other than its keywords)** |
 | Snipe           | Any continuous filename  |      ""       | Snipe a specific file (exactly) to execute program on (mainly for debugging) |
 | ShowConVars     |   true (1) / false (0)   |     false     | Outputs console variables parsed from demo (mainly for debugging) |

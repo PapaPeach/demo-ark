@@ -140,6 +140,7 @@ func ZipOldDemos(zipOlderThan uint8) {
 	}
 
 	// Check if file is older than threshhold
+	var hasSpoken bool
 	for _, filename := range contents {
 		// DataMajorDir=true file structure (demos_2YYY/gametype/blah.dem)
 		if len(filename) == 10 && strings.HasPrefix(filename, "demos_2") {
@@ -154,6 +155,10 @@ func ZipOldDemos(zipOlderThan uint8) {
 
 			// Check if we should zip
 			if year-fileYear >= int(zipOlderThan) {
+				if !hasSpoken {
+					fmt.Println("Zipping takes ~0.5 seconds per demo. Please be patient")
+					hasSpoken = true
+				}
 				ZipDir(filename)
 			}
 		} else if filename == "demos_tournament" ||
@@ -195,6 +200,10 @@ func ZipOldDemos(zipOlderThan uint8) {
 
 				// Check if we should zip
 				if year-fileYear >= int(zipOlderThan) {
+					if !hasSpoken {
+						fmt.Println("Zipping takes ~0.5 seconds per demo. Please be patient")
+						hasSpoken = true
+					}
 					ZipDir(filename + string(filepath.Separator) + innerFilename)
 				}
 			}
