@@ -5,6 +5,8 @@ I wrote this because I have always been irritated by the shortcomings of TF2's D
 
 Demo Ark supports the following game types: community competitive (like RGL), Casual, Valve competitive, MvM, and community servers (community game modes such as VSH or Zombie Infection are considered community servers).
 
+Here's a [Quick Showcase Video](https://youtu.be/rFJxBitEfhQ).
+
 # Installation
 1. Download latest version of Demo Ark from the [Releases page](https://github.com/PapaPeach/demo-ark/releases).
 2. Place **demoark.exe** where TF2 records demos to (this can be configured in-game with `ds_dir ...`).
@@ -55,7 +57,7 @@ For example: `./demo-ark silent=true sortYear=1 ZipOlderThan=3 SNIPE=the_med.dem
 # Potential Options
 I tried to keep the options limited to things most people would find useful to keep customization approachable and maintainable. Unfortunately, I can't please everyone, but I think the program covers an overwhelming majority of use cases.
 
-I can't add one-off customization options for individuals, if I receive enough feedback for features via the appropriate channels (such as my [HUD / Project Discord](https://discord.gg/HyZRVtp)) I will do my best to add them.
+I can't add one-off customization options for individuals, if I receive enough feedback for features via the appropriate channels, such as the TF2Utilities Feedback channel my [HUD / Project Discord](https://discord.gg/HyZRVtp), I will do my best to add them.
 | Key Word       |        Status        | Description |
 |----------------|:--------------------:|-------------|
 | Multithread    | Planned, see below | Allow the use of multiple cores / threads<br> **0:** Off **1:** All but 1 core **2:** Half cores **3:** Quarter cores... |
@@ -63,9 +65,11 @@ I can't add one-off customization options for individuals, if I receive enough f
 | UseEditDate    |  Removed, too niche  | Use the date that a demo was last edited rather than date in its file name |
 | TwelveHourTime | Removed, too finicky | **True:** 12hr<br>**False:** 24hr |
 
-**Note on Multithreading:** This was originally a planned feature at launch. But after farther consideration this was postponed as it was determined to have limited usefulness and require more testing.  
-The bulk of processing time for Demo Ark is spent on disk read / write operations that would see no benefit from CPU parallelization. Furthermore, multithreading has a substantial initial overhead that would result in performance gains only for bulk sorting of ~100+ demos per core, which would likely only be the initial run of Demo Ark for most users.  
-On the frequent smaller operations intended with the automated functionality, the initial overhead of multithreading would actually *increase* sorting times, though this would be recognized by the program and disabled.  
+**Note on Multithreading:** This was originally a planned feature at launch. But after farther consideration this was postponed as it was determined to have limited usefulness and require more testing.
+
+The bulk of processing time for Demo Ark is spent on disk read / write operations that would see no benefit from CPU parallelization. Furthermore, multithreading has an initial overhead that would only break even for bulk sorting of ~10 demos per core, which would likely only be the initial run of Demo Ark.  
+On the frequent smaller operations intended with the automated functionality, the initial overhead of multithreading would actually *increase* sorting times, though this would be recognized by the program and disabled.
+
 It is still a planned feature, but that is why it is not available on release.
 
 # Supported Operating Systems
@@ -77,11 +81,13 @@ It is still a planned feature, but that is why it is not available on release.
 
 # How's It Work?
 Demos pre-date the ability to conveniently share videos, so instead they are essentially instructions for an offline server to replay the game exactly as the original live match you recorded. That includes server settings which can be used to differentiate between the settings used for Casual, Tournament, and MvM servers.  
+
 The rest of the program is simply parsing the bit-buffered contents of demos and managing selected options.
 
 # Is This A Virus?
 ### Nope.
-Your anti-virus will likely warn you about running executables made by unknown creators, which is its job. If you know how, I invite you to review my code, build it from source, and even provide feedback.  
+Your anti-virus will likely warn you about running executables made by unknown creators, which is its job. If you know how, I invite you to review my code, build it from source, and even provide feedback.
+
 If the project takes off I can look into getting Demo Ark officially approved by Microsoft so Windows Security won't show this warning. Though to maintain Microsoft recognition I'd have to resubmit Demo Ark every update and wait for their approval, or pay $300-$700 annually for Microsoft to guarantee my program would be reviewed within 24 hours of submission. This also wouldn't apply to third-party anti-virus providers.
 
 # Thanks
