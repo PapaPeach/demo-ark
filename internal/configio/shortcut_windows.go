@@ -80,11 +80,15 @@ func CreateConfiguredShortcut(args Arguments) {
 		}
 	}
 
-	// Get filepath to TF2's game.ico
-	iconPath, err := os.Getwd()
+	// Get working directory
+	workingDirectory, err := os.Getwd()
 	if err != nil {
-		log.Println("Error getting working directory for shortcut icon:", err)
+		log.Println("Error getting working directory for shortcut:", err)
+		util.EnterToExit(false)
 	}
+
+	// Get filepath to TF2's game.ico
+	iconPath := workingDirectory
 
 	// Make sure path is in tf directory
 	tf := filepath.Join("Team Fortress 2", "tf")
@@ -114,7 +118,7 @@ func CreateConfiguredShortcut(args Arguments) {
 			Description:      "",
 			Hotkey:           "",
 			WindowStyle:      "1",
-			WorkingDirectory: "",
+			WorkingDirectory: workingDirectory,
 		}
 		err = shortcut.Create(sc)
 		if err != nil {

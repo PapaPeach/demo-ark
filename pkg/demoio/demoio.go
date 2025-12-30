@@ -156,7 +156,7 @@ func ZipOldDemos(zipOlderThan uint8) {
 			// Check if we should zip
 			if year-fileYear >= int(zipOlderThan) {
 				if !hasSpoken {
-					fmt.Println("Zipping takes ~0.5 seconds per demo. Please be patient")
+					fmt.Println("\nZipping takes ~0.5 seconds per demo. Please be patient")
 					hasSpoken = true
 				}
 				ZipDir(filename)
@@ -201,7 +201,7 @@ func ZipOldDemos(zipOlderThan uint8) {
 				// Check if we should zip
 				if year-fileYear >= int(zipOlderThan) {
 					if !hasSpoken {
-						fmt.Println("Zipping takes ~0.5 seconds per demo. Please be patient")
+						fmt.Println("\nZipping takes ~0.5 seconds per demo. Please be patient")
 						hasSpoken = true
 					}
 					ZipDir(filename + string(filepath.Separator) + innerFilename)
