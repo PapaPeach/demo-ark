@@ -309,7 +309,7 @@ prompt7:
 	if !cmdArgs[CullBelow] {
 		fmt.Println()
 		var back bool
-		a.CullBelow, back = parseIntPrompt("(7 / 17) Enter the minimum length of a demo in seconds to mark for culling.", 300, def.CullBelow)
+		a.CullBelow, back = parseIntPrompt("(7 / 17) Enter the maximum length of a demo in seconds to mark for culling.", 300, def.CullBelow)
 		if back { // Handle back command
 			if a.RenameMap || a.RenameDuration { // Special case for skip logic
 				goto prompt6
@@ -650,7 +650,7 @@ func GetArgs() Arguments {
 	var args []string
 	for _, arg := range os.Args[1:] {
 		// Don't set Snipe's value to lower case!
-		if strings.EqualFold(arg[:5], Snipe) {
+		if len(arg) > len(Snipe) && strings.EqualFold(arg[:5], Snipe) {
 			args = append(args, strings.ToLower(arg[:5])+arg[5:])
 		}
 
