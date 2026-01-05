@@ -4,8 +4,8 @@ package configio
 
 import (
 	"demo-ark/demoark/internal/util"
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -20,8 +20,8 @@ func CreateConfiguredShortcut(args Arguments) {
 	// Get filepath of program
 	programPath, err := os.Executable()
 	if err != nil {
-		log.Println("Error getting program path for shortcut:", err)
-		util.EnterToExit(false)
+		er := errors.New("Error getting program path for shortcut: " + err.Error())
+		util.EnterToExit(false, er)
 	}
 
 	// Get currently applied options
@@ -75,16 +75,16 @@ func CreateConfiguredShortcut(args Arguments) {
 			}
 
 		default:
-			log.Println("Error getting arguments for shortcut", err)
-			util.EnterToExit(false)
+			er := errors.New("Error getting arguments for shortcut: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 	}
 
 	// Get working directory
 	workingDirectory, err := os.Getwd()
 	if err != nil {
-		log.Println("Error getting working directory for shortcut:", err)
-		util.EnterToExit(false)
+		er := errors.New("Error getting working directory for shortcut: " + err.Error())
+		util.EnterToExit(false, er)
 	}
 
 	// Get filepath to TF2's game.ico
@@ -102,8 +102,8 @@ func CreateConfiguredShortcut(args Arguments) {
 	if runtime.GOOS == "windows" {
 		iconPath = filepath.Join(iconPath, "game.ico")
 	} else {
-		log.Println("Detected unsupported operating system.")
-		util.EnterToExit(false)
+		er := errors.New("Detected unsupported operating system.")
+		util.EnterToExit(false, er)
 	}
 
 	// Create shortcut
@@ -122,11 +122,11 @@ func CreateConfiguredShortcut(args Arguments) {
 		}
 		err = shortcut.Create(sc)
 		if err != nil {
-			log.Println("Error creating Windows shortcut:", err)
-			util.EnterToExit(false)
+			er := errors.New("Error creating Windows shortcut: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 	} else {
-		log.Println("Detected unsupported operating system.")
-		util.EnterToExit(false)
+		er := errors.New("Detected unsupported operating system.")
+		util.EnterToExit(false, er)
 	}
 }

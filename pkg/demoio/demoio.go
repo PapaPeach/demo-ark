@@ -58,8 +58,8 @@ func ZipDir(dirName string) {
 		fmt.Printf("Detected existing %s.zip, consolidating contents...\n", dirName)
 		er := os.Rename(dirName+".zip", oldZip)
 		if er != nil {
-			log.Println("Error renaming existing zip:", er)
-			util.EnterToExit(false)
+			e := errors.New("Error renaming existing zip: " + er.Error())
+			util.EnterToExit(false, e)
 		}
 		hasConflict = true
 	}
@@ -67,8 +67,8 @@ func ZipDir(dirName string) {
 	// Create zip file
 	zipFile, err := os.Create(dirName + ".zip")
 	if err != nil {
-		log.Println("Error creating zip file:", err)
-		os.Exit(1)
+		er := errors.New("Error creating zip file: " + err.Error())
+		util.EnterToExit(false, er)
 	}
 	defer zipFile.Close()
 
@@ -82,16 +82,16 @@ func ZipDir(dirName string) {
 		var zipReader *zip.ReadCloser
 		zipReader, err = zip.OpenReader(oldZip)
 		if err != nil {
-			log.Println("Error opening existing zip:", err)
-			os.Exit(1)
+			er := errors.New("Error opening existing zip: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 
 		// Copy contents from existing archive to new archive
 		for _, file := range zipReader.File {
 			err = zipWriter.Copy(file)
 			if err != nil {
-				log.Println("Error copying existing zip:", err)
-				os.Exit(1)
+				er := errors.New("Error copying existing zip: " + err.Error())
+				util.EnterToExit(false, er)
 			}
 		}
 		zipReader.Close()
@@ -107,8 +107,8 @@ func ZipDir(dirName string) {
 	dir := os.DirFS(dirName)
 	err = zipWriter.AddFS(dir)
 	if err != nil {
-		log.Println("Error zipping directory:", err)
-		os.Exit(1)
+		er := errors.New("Error zipping directory: " + err.Error())
+		util.EnterToExit(false, er)
 	}
 
 	// Removed source directory
@@ -122,15 +122,15 @@ func ZipOldDemos(zipOlderThan uint8) {
 	// Read contents of current directory for "demos_..."
 	directory, err := os.Open(".")
 	if err != nil {
-		log.Println("Error opening current directory for date gathering:", err)
-		os.Exit(1)
+		er := errors.New("Error opening current directory for date gathering: " + err.Error())
+		util.EnterToExit(false, er)
 	}
 	defer directory.Close()
 
 	contents, err := directory.Readdirnames(0)
 	if err != nil {
-		log.Println("Error reading contents of current directory for date gathering:", err)
-		os.Exit(1)
+		er := errors.New("Error reading contents of current directory for date gathering: " + err.Error())
+		util.EnterToExit(false, er)
 	}
 
 	// If ZipOlderThan is 1 year, wait until Spring season (Feb) to zip last year
@@ -259,8 +259,8 @@ func CullGameTypes(demos *[]Demo, key string) []Demo {
 
 	// Ensure key only contains usable characters
 	if parsed != len(key) {
-		log.Printf("Invalid CullGameType key. Usage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
-		os.Exit(1)
+		err := errors.New("Invalid CullGameType key. Usage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).")
+		util.EnterToExit(false, err)
 	}
 
 	// Mark demos of gametype for culling
@@ -498,20 +498,18 @@ func GetDemos(searchDirs bool, ignoreWords []string) []Demo {
 			return nil
 		})
 		if err != nil {
-			log.Println("Error walking directory:", err)
-			util.EnterToExit(false)
+			er := errors.New("Error walking directory: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 	} else { // Just search current directory
 		// Get list of files in current directory
 		dir, err := os.Open(".")
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		files, err := dir.ReadDir(0)
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		defer dir.Close()
 
@@ -528,15 +526,17 @@ func SnipeDemo(filename string) []Demo {
 	// Open demo and parse info
 	file, err := os.Open(filename)
 	if err != nil {
-		fmt.Printf("Error opening %v: %v\n", filename, err)
-		os.Exit(1)
+		erString := fmt.Sprintf("Error opening %v: %v\n", filename, err)
+		er := errors.New(erString)
+		util.EnterToExit(false, er)
 	}
 	defer file.Close()
 
 	fileInfo, err := os.Stat(filename)
 	if err != nil {
-		fmt.Printf("Error opening %v: %v\n", filename, err)
-		os.Exit(1)
+		erString := fmt.Sprintf("Error opening %v: %v\n", filename, err)
+		er := errors.New(erString)
+		util.EnterToExit(false, er)
 	}
 
 	header := parser.ReadHeader(file)
@@ -614,8 +614,7 @@ func SortDemos(demoList *[]Demo, culled []Demo, sortYear bool, sortGameType bool
 			// Make directory to move demo to
 			err := os.MkdirAll(demos[i].WishDir, os.ModePerm)
 			if err != nil && !errors.Is(err, os.ErrExist) {
-				log.Println(err)
-				os.Exit(1)
+				util.EnterToExit(false, err)
 			}
 
 			// Move demo to directory and rename
@@ -631,8 +630,7 @@ cull:
 	if cullMode == 1 {
 		err := os.RemoveAll(filepath.Join(".", culledDir))
 		if err != nil {
-			log.Println(err)
-			os.Exit(2)
+			util.EnterToExit(false, err)
 		}
 	}
 
@@ -654,8 +652,7 @@ cull:
 		// Make directory to move demo to
 		err := os.MkdirAll(culledDir, os.ModePerm)
 		if err != nil && !errors.Is(err, os.ErrExist) {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 	}
 

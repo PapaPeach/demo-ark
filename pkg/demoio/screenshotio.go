@@ -1,6 +1,7 @@
 package demoio
 
 import (
+	"demo-ark/demoark/internal/util"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -32,13 +33,11 @@ func GetScreenshots(searchDirs bool, ignoreWords []string) []string {
 		// Get list of files in current directory
 		dir, err := os.Open(".")
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		files, err := dir.ReadDir(0)
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		defer dir.Close()
 
@@ -75,8 +74,8 @@ func UpdateScreenshots(screenshots []string, demos []Demo, cullScreenshots bool,
 			newName := strings.Replace(demo.NewName, ".dem", ".tga", 1)
 			err := os.Rename(screenshot, filepath.Join(demo.WishDir, newName))
 			if err != nil {
-				log.Println("Error updating .tga:", err)
-				os.Exit(1)
+				er := errors.New("Error updating .tga: " + err.Error())
+				util.EnterToExit(false, er)
 			}
 		}
 
@@ -105,8 +104,7 @@ func UpdateScreenshots(screenshots []string, demos []Demo, cullScreenshots bool,
 		// Make directory to move screenshots to
 		err := os.MkdirAll(culledDir, os.ModePerm)
 		if err != nil && !errors.Is(err, os.ErrExist) {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 	}
 

@@ -2,6 +2,7 @@ package configio
 
 import (
 	"demo-ark/demoark/internal/util"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -104,8 +105,8 @@ func parseBoolArg(args []string, keyword string, def bool, message string) (bool
 				fmt.Println("Not", message)
 				return false, true
 			default:
-				log.Printf("Invalid argument value: %s\n", arg)
-				util.EnterToExit(false)
+				err := errors.New("Invalid argument value: " + arg)
+				util.EnterToExit(false, err)
 			}
 		}
 	}
@@ -120,8 +121,8 @@ func parseIntArg(args []string, keyword string, def uint16) (uint16, bool) {
 		if strings.HasPrefix(arg, keyword+"=") {
 			value, err := strconv.ParseUint(arg[len(keyword)+1:], 10, 0)
 			if err != nil {
-				log.Printf("Invalid argument value: %s\n", arg)
-				util.EnterToExit(false)
+				er := errors.New("Invalid argument value: " + arg)
+				util.EnterToExit(false, er)
 			}
 
 			return uint16(value), true
@@ -435,8 +436,8 @@ prompt12:
 					continue
 				}
 				// Genuine error
-				log.Println("Error parsing response to integer prompt from user:", err)
-				util.EnterToExit(false)
+				er := errors.New("Error parsing response to integer prompt from user: " + err.Error())
+				util.EnterToExit(false, er)
 			}
 			if inputInt <= 2 {
 				a.CullMode = uint8(inputInt)
@@ -623,7 +624,7 @@ prompt18:
 }
 
 /* Launches TF2 via Steam api to maintain user's launch options. */
-func LaunchGame() {
+func LaunchGame() error {
 	// Get correct launch command for given OS
 	url := "steam://rungameid/440"
 	var cmd *exec.Cmd
@@ -635,16 +636,16 @@ func LaunchGame() {
 	case "darwin": // Mac
 		cmd = exec.Command("open", url)
 	default:
-		log.Println("Detected unsupported operating system.")
-		util.EnterToExit(false)
+		return errors.New("Detected unsupported operating system.")
 	}
 
 	// Run command and continue with program execution
 	err := cmd.Start()
 	if err != nil {
-		log.Println("Error launching TF2:", err)
-		util.EnterToExit(false)
+		return errors.New("Error launching TF2: " + err.Error())
 	}
+
+	return nil
 }
 
 /* Gets argument values. */
@@ -682,8 +683,8 @@ func GetArgs() Arguments {
 	if tempCullMode <= 2 {
 		a.CullMode = uint8(tempCullMode)
 	} else { // Above upper bound
-		log.Println("Invalid CullMode value. Allowed range: 0 to 2.")
-		util.EnterToExit(false)
+		err := errors.New("Invalid CullMode value. Allowed range: 0 to 2.")
+		util.EnterToExit(false, err)
 	}
 	if cmdArgs[CullMode] {
 		switch a.CullMode {
@@ -701,8 +702,8 @@ func GetArgs() Arguments {
 	if a.CullBelow != 0 && cmdArgs[CullBelow] {
 		// Don't allow culling more than 5 minute demos
 		if a.CullBelow > maxCullBelow {
-			log.Println("Invalid CullBelow value. Cannot cull demos longer than 5 minutes.")
-			util.EnterToExit(false)
+			err := errors.New("Invalid CullBelow value. Cannot cull demos longer than 5 minutes.")
+			util.EnterToExit(false, err)
 		}
 		fmt.Printf("Culling demos shorter than: %d seconds\n", a.CullBelow)
 	} else if cmdArgs[CullBelow] {
@@ -716,16 +717,17 @@ func GetArgs() Arguments {
 			gameTypes := arg[len(CullGameTypes)+1:]
 			// Validate value length
 			if len(gameTypes) == 0 {
-				log.Printf("Invalid CullGameType value. Need game type key.\nUsage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n")
-				util.EnterToExit(false)
+				err := errors.New("Invalid CullGameType value. Need game type key.\nUsage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).")
+				util.EnterToExit(false, err)
 			}
 			// Validate value contents
 			if !strings.ContainsRune(gameTypes, 'c') &&
 				!strings.ContainsRune(gameTypes, 'q') &&
 				!strings.ContainsRune(gameTypes, 'm') &&
 				!strings.ContainsRune(gameTypes, 'v') {
-				log.Printf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n", gameTypes)
-				util.EnterToExit(false)
+				errString := fmt.Sprintf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).", gameTypes)
+				err := errors.New(errString)
+				util.EnterToExit(false, err)
 			}
 
 			a.CullGameTypes = gameTypes
@@ -747,8 +749,8 @@ func GetArgs() Arguments {
 	if tempZipOlderThan <= math.MaxUint8 {
 		a.ZipOlderThan = uint8(tempZipOlderThan)
 	} else { // Above upper bound
-		log.Println("Invalid ZipOlderThan value. Allowed range: 0 to 255.")
-		util.EnterToExit(false)
+		err := errors.New("Invalid ZipOlderThan value. Allowed range: 0 to 255.")
+		util.EnterToExit(false, err)
 	}
 	if a.ZipOlderThan != 0 && cmdArgs[ZipOlderThan] {
 		fmt.Printf("Zipping demos older than: %d years\n", a.ZipOlderThan)

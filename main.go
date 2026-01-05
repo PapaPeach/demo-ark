@@ -5,6 +5,7 @@ import (
 	"demo-ark/demoark/internal/util"
 	"demo-ark/demoark/pkg/demoio"
 	"fmt"
+	"log"
 )
 
 type Demo = demoio.Demo
@@ -26,12 +27,15 @@ func main() {
 	// Just create shortcut
 	if args.CreateShortcut {
 		configio.CreateConfiguredShortcut(args)
-		util.EnterToExit(args.Silent)
+		util.EnterToExit(args.Silent, nil)
 	}
 
 	// Launch TF2 while program runs
 	if args.LaunchTF2 {
-		configio.LaunchGame()
+		err := configio.LaunchGame()
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	// Get demos
@@ -124,5 +128,5 @@ func main() {
 	}*/
 
 	// Report that we're done
-	util.EnterToExit(args.Silent)
+	util.EnterToExit(args.Silent, nil)
 }

@@ -55,8 +55,8 @@ func eventWalker(ignoreWords []string, processFile func(path string, file fs.Dir
 		return nil
 	})
 	if err != nil {
-		log.Println("Error walking directory:", err)
-		util.EnterToExit(false)
+		er := errors.New("Error walking directory: " + err.Error())
+		util.EnterToExit(false, er)
 	}
 }
 
@@ -126,13 +126,11 @@ func GetEventTxts(searchDirs bool, cullEventTxts bool, ignoreWords []string) (ma
 		// Get list of files in current directory
 		dir, err := os.Open(".")
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		files, err := dir.ReadDir(0)
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		defer dir.Close()
 
@@ -182,13 +180,11 @@ func GetEventJsons(searchDirs bool, cullEventJsons bool, ignoreWords []string) (
 		// Get list of files in current directory
 		dir, err := os.Open(".")
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		files, err := dir.ReadDir(0)
 		if err != nil {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 		defer dir.Close()
 
@@ -213,8 +209,8 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 		// Read file
 		eventFile, err := os.ReadFile(eventTxt)
 		if err != nil {
-			log.Println("Error reading event file for updating:", err)
-			os.Exit(1)
+			er := errors.New("Error reading event file for updating: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 		contents := string(eventFile)
 
@@ -235,23 +231,23 @@ func UpdateEventTxts(eventTxts map[string][]string, culledEventTxts []string, de
 		// Write updated contents to temporary file
 		tempFile, err := os.CreateTemp(filepath.Dir(eventTxt), "temp*")
 		if err != nil {
-			log.Println("Error creating temporary _events.txt file:", err)
-			os.Exit(1)
+			er := errors.New("Error creating temporary _events.txt file: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 
 		_, err = tempFile.WriteString(contents)
 		if err != nil {
-			log.Println("Error writing to temporary _events.txt file:", err)
 			tempFile.Close()
-			os.Exit(1)
+			er := errors.New("Error writing to temporary _events.txt file: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 		tempFile.Close()
 
 		// Rename temp file to _events.txt
 		err = os.Rename(tempFile.Name(), eventTxt)
 		if err != nil {
-			log.Println("Error renaming temporary file:", err)
-			os.Exit(1)
+			er := errors.New("Error renaming temporary file: " + err.Error())
+			util.EnterToExit(false, er)
 		}
 
 		// TODO: Remove temp file?
@@ -277,8 +273,7 @@ culling:
 		// Make directory to move events to
 		err := os.MkdirAll(culledDir, os.ModePerm)
 		if err != nil && !errors.Is(err, os.ErrExist) {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 	}
 
@@ -323,8 +318,8 @@ func UpdateEventJsons(eventJsons []string, culledEventJsons []string, demos []De
 			newName := strings.Replace(demo.NewName, ".dem", ".json", 1)
 			err := os.Rename(eventJson, filepath.Join(demo.WishDir, newName))
 			if err != nil {
-				log.Println("Error updating .json:", err)
-				os.Exit(1)
+				er := errors.New("Error updating .json: " + err.Error())
+				util.EnterToExit(false, er)
 			}
 		}
 
@@ -354,8 +349,7 @@ culling:
 		// Make directory to move events to
 		err := os.MkdirAll(culledDir, os.ModePerm)
 		if err != nil && !errors.Is(err, os.ErrExist) {
-			log.Println(err)
-			os.Exit(1)
+			util.EnterToExit(false, err)
 		}
 	}
 
