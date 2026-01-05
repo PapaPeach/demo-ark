@@ -4,6 +4,7 @@ import (
 	"demo-ark/demoark/internal/util"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"runtime"
@@ -36,6 +37,8 @@ type Arguments struct {
 	IgnoreWords     []string // Ignore file / folder names containing string
 }
 
+const maxCullBelow = 300 // 5 min
+
 // Default option values
 var def = Arguments{
 	Silent:          false,
@@ -55,10 +58,10 @@ var def = Arguments{
 	ShowConVars:     false,
 	ZipOlderThan:    1,
 	CullMode:        1,
-	CullBelow:       30,
+	CullBelow:       30, // 30 sec
 	CullGameTypes:   "c",
 	Snipe:           "",
-	IgnoreWords:     []string{"ignore"},
+	IgnoreWords:     []string{"ignore"}, // TODO: Remove ignore if custom is specified
 }
 
 /* Keywords for command line arguments. */
@@ -309,7 +312,7 @@ prompt7:
 	if !cmdArgs[CullBelow] {
 		fmt.Println()
 		var back bool
-		a.CullBelow, back = parseIntPrompt("(7 / 17) Enter the maximum length of a demo in seconds to mark for culling.", 300, def.CullBelow)
+		a.CullBelow, back = parseIntPrompt("(7 / 17) Enter the maximum length of a demo in seconds to mark for culling.", maxCullBelow, def.CullBelow)
 		if back { // Handle back command
 			if a.RenameMap || a.RenameDuration { // Special case for skip logic
 				goto prompt6
@@ -356,10 +359,10 @@ prompt8:
 
 		// Validate value contents
 		input = strings.ToLower(input)
-		if !(strings.ContainsRune(input, 'c') ||
-			strings.ContainsRune(input, 'q') ||
-			strings.ContainsRune(input, 'm') ||
-			strings.ContainsRune(input, 'v')) {
+		if !strings.ContainsRune(input, 'c') &&
+			!strings.ContainsRune(input, 'q') &&
+			!strings.ContainsRune(input, 'm') &&
+			!strings.ContainsRune(input, 'v') {
 			log.Printf("Invalid input: %s. Example: \"CM\" would mark Casual and MvM demos for culling.\n", input)
 			continue
 		}
@@ -456,7 +459,7 @@ prompt12:
 prompt13:
 	if !cmdArgs[ZipOlderThan] {
 		fmt.Println()
-		tempZipOlderThan, back := parseIntPrompt("(13 / 17) Enter the minimum age of a demo in years to compress to a .zip file.", 255, uint16(def.ZipOlderThan))
+		tempZipOlderThan, back := parseIntPrompt("(13 / 17) Enter the minimum age of a demo in years to compress to a .zip file.", math.MaxUint8, uint16(def.ZipOlderThan))
 		if back { // Handle back command
 			goto prompt12
 		}
@@ -697,7 +700,7 @@ func GetArgs() Arguments {
 	a.CullBelow, cmdArgs[CullBelow] = parseIntArg(args, CullBelow, a.CullBelow)
 	if a.CullBelow != 0 && cmdArgs[CullBelow] {
 		// Don't allow culling more than 5 minute demos
-		if a.CullBelow > 300 {
+		if a.CullBelow > maxCullBelow {
 			log.Println("Invalid CullBelow value. Cannot cull demos longer than 5 minutes.")
 			util.EnterToExit(false)
 		}
@@ -717,10 +720,10 @@ func GetArgs() Arguments {
 				util.EnterToExit(false)
 			}
 			// Validate value contents
-			if !(strings.ContainsRune(gameTypes, 'c') ||
-				strings.ContainsRune(gameTypes, 'q') ||
-				strings.ContainsRune(gameTypes, 'm') ||
-				strings.ContainsRune(gameTypes, 'v')) {
+			if !strings.ContainsRune(gameTypes, 'c') &&
+				!strings.ContainsRune(gameTypes, 'q') &&
+				!strings.ContainsRune(gameTypes, 'm') &&
+				!strings.ContainsRune(gameTypes, 'v') {
 				log.Printf("Invalid CullGameType value: %s\nUsage: CullGameType=cm (c = Casual, q = QuickPlay / Community, m = MvM, v = Valve Competitive).\n", gameTypes)
 				util.EnterToExit(false)
 			}
@@ -741,7 +744,7 @@ func GetArgs() Arguments {
 	var tempZipOlderThan uint16
 	tempZipOlderThan, cmdArgs[ZipOlderThan] = parseIntArg(args, ZipOlderThan, uint16(a.ZipOlderThan))
 	// Enforce bounds
-	if tempZipOlderThan <= 255 {
+	if tempZipOlderThan <= math.MaxUint8 {
 		a.ZipOlderThan = uint8(tempZipOlderThan)
 	} else { // Above upper bound
 		log.Println("Invalid ZipOlderThan value. Allowed range: 0 to 255.")

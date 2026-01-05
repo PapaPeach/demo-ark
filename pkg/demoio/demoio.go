@@ -186,7 +186,7 @@ func ZipOldDemos(zipOlderThan uint8) {
 			// Check if we should zip inner files
 			for _, innerFilename := range gameTypeContents {
 				// Skip impossible years
-				if len(innerFilename) != 4 {
+				if len(innerFilename) != len("2025") {
 					continue
 				}
 
